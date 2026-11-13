@@ -243,3 +243,13 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Status blink for the sync chip: on, off, in two hard steps (no fade). */
+@keyframes pixel-blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}

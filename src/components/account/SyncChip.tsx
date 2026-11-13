@@ -1,13 +1,7 @@
 "use client";
 
 import { Popover } from "@base-ui/react/popover";
-import {
-  CheckIcon,
-  CircleNotchIcon,
-  CloudSlashIcon,
-  EnvelopeSimpleIcon,
-  WarningIcon,
-} from "@phosphor-icons/react";
+import { CheckIcon, CloudSlashIcon, WarningIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
 import type { ReactNode } from "react";
 import { useSyncState, type SyncStatus } from "@/lib/sync/state";
@@ -17,10 +11,10 @@ const LOOK: Partial<
 > = {
   loading: {
     icon: (
-      <CircleNotchIcon
-        size={14}
-        weight="bold"
-        className="animate-spin motion-reduce:animate-none"
+      // A blinking pixel, like the stadium's LED boards, instead of a generic spinner.
+      <span
+        aria-hidden
+        className="block size-2 bg-current motion-safe:animate-[pixel-blink_1s_steps(2,end)_infinite]"
       />
     ),
     label: "Loading…",
@@ -28,15 +22,15 @@ const LOOK: Partial<
   },
   merging: {
     icon: <WarningIcon size={14} weight="bold" />,
-    label: "Waiting for you",
+    label: "Choose what to keep",
     tone: "warn",
   },
   saving: {
     icon: (
-      <CircleNotchIcon
-        size={14}
-        weight="bold"
-        className="animate-spin motion-reduce:animate-none"
+      // A blinking pixel, like the stadium's LED boards, instead of a generic spinner.
+      <span
+        aria-hidden
+        className="block size-2 bg-current motion-safe:animate-[pixel-blink_1s_steps(2,end)_infinite]"
       />
     ),
     label: "Saving…",
@@ -49,11 +43,7 @@ const LOOK: Partial<
     tone: "quiet",
   },
   blocked: { icon: <WarningIcon size={14} weight="bold" />, label: "Not saved", tone: "warn" },
-  unverified: {
-    icon: <EnvelopeSimpleIcon size={14} weight="bold" />,
-    label: "Confirm email",
-    tone: "warn",
-  },
+  // Unverified: the banner under the header says it, with the resend button.
 };
 
 const chip =

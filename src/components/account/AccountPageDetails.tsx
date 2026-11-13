@@ -30,7 +30,7 @@ export function AccountPageDetails({
     const { ok } = await signOutSafely();
     setBusy(false);
     if (!ok) toast.error("Couldn't sign out. Try again.");
-    else toast.success("Signed out. Your clubs stay in this browser.");
+    else toast.success("Signed out. Your clubs are still in this browser.");
   }
 
   return (
