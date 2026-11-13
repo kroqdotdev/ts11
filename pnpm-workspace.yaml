@@ -3,3 +3,7 @@ allowBuilds:
   esbuild: true
   sharp: false
   unrs-resolver: false
+overrides:
+  # Security fixes in development-only tools (drizzle-kit's old esbuild loader, glob's minimatch).
+  "@esbuild-kit/core-utils>esbuild": "^0.25.0"
+  "minimatch@>=7.0.0 <11.0.1": "^11.0.1"
