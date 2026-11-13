@@ -1,3 +1,4 @@
+import localFont from "next/font/local";
 import {
   Anton,
   Archivo,
@@ -22,12 +23,16 @@ const archivoUi = Archivo({
   display: "swap",
 });
 
-export const archivo = Archivo({
-  subsets: ["latin"],
-  axes: ["wdth"],
+// Bundled (SIL OFL, see src/fonts/Archivo-OFL.txt) so it gets its own family name and
+// the browser only downloads it where a graphic uses it.
+export const archivoWide = localFont({
+  src: "../fonts/archivo-wdth-wght-latin.woff2",
+  weight: "100 900",
+  style: "normal",
   variable: "--font-archivo",
   display: "swap",
   preload: false,
+  declarations: [{ prop: "font-stretch", value: "62% 125%" }],
 });
 
 const anton = Anton({
@@ -74,7 +79,7 @@ const jersey = Jersey_10({ subsets: ["latin"], weight: "400", variable: "--font-
 
 export const fontVariables = [
   archivoUi,
-  archivo,
+  archivoWide,
   anton,
   bebas,
   shoulders,
@@ -107,7 +112,7 @@ export const GRAPHIC_FONTS: Record<FontId, GraphicFont> = {
   archivo: {
     id: "archivo",
     label: "Archivo",
-    family: archivo.style.fontFamily,
+    family: archivoWide.style.fontFamily,
     heavy: 850,
     light: 600,
     stretch: "64%",
