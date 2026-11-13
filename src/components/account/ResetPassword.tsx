@@ -2,7 +2,6 @@
 
 import { CheckCircleIcon, WarningIcon } from "@phosphor-icons/react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useId, useState, type FormEvent } from "react";
 import { Button, inputClass } from "@/components/ui/controls";
 import { authClient } from "@/lib/auth-client";
@@ -72,11 +71,17 @@ function Problem({ title, body }: { title: string; body: string }) {
   );
 }
 
-/** Sets a new password from the link in the reset email. */
-export function ResetPassword() {
-  const params = useSearchParams();
-  const token = params.get("token");
-  const linkError = params.get("error");
+/**
+ * Sets a new password from the link in the reset email. The page reads the token
+ * from the URL on the server, so this renders in the first HTML.
+ */
+export function ResetPassword({
+  token,
+  linkError,
+}: {
+  token: string | null;
+  linkError: string | null;
+}) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);

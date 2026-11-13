@@ -77,7 +77,11 @@ function useProviders(userId: string | undefined) {
   return providers;
 }
 
-export function AccountPage() {
+/**
+ * `signedIn` comes from the server when it's known, so a signed-out visitor sees the
+ * sign-in panel in the first HTML instead of a skeleton while the session loads.
+ */
+export function AccountPage({ signedIn }: { signedIn?: boolean }) {
   const { data: session, isPending } = useSession();
   const user = session?.user;
   const verified = !!user?.emailVerified;
@@ -117,7 +121,9 @@ export function AccountPage() {
             Storage and account
           </h1>
 
-          {isPending ? (
+          {isPending && signedIn === false ? (
+            <AccountPageSignIn />
+          ) : isPending ? (
             <PageSkeleton />
           ) : !user ? (
             <AccountPageSignIn />
