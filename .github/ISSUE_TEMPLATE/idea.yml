@@ -1,0 +1,16 @@
+name: Idea or request
+description: A new graphic, style, size or something that would save you time on match day.
+labels: [idea]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: Describe what you're trying to do on match day and what's in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Examples
+      description: Posts from other clubs you like, sketches, anything that shows what you mean.

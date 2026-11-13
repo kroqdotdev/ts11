@@ -1,0 +1,245 @@
+@import "tailwindcss";
+
+/* Laptop screens (1280×720 to 1440×900): the club setup's big screen tightens up. */
+@custom-variant short {
+  @media (max-height: 920px) and (min-width: 1024px) {
+    @slot;
+  }
+}
+
+/*
+  teamsheet11 tokens: Saturday, 2:45pm.
+  The ground is mown grass, lines and type are chalk, and the only accents are the
+  referee's cards: yellow for actions, red for anything that deletes.
+  Panels in the studio are the team sheet itself: plain paper, dark ink.
+*/
+:root {
+  --grass: #1c5434;
+  --grass-mown: #21603b;
+  --grass-deep: #113520;
+  --chalk: #f2f5ef;
+  --paper: #fbfcfa;
+  --well: #eef2ec;
+  --ink: #0d1a12;
+  --ink-soft: #4b5b50;
+  --rule: #d2dbd1;
+  --card: #f7c600;
+  --card-ink: #0d1a12;
+  /* Outline and hard shadow of floating windows (dialogs, menus, popovers). */
+  --edge: #0d1a12;
+  --danger: #c81f33;
+  --shadow: 6 24 13;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Same pitch under floodlights. */
+    --grass: #164429;
+    --grass-mown: #1a4d2f;
+    --grass-deep: #0b2415;
+    --paper: #101a14;
+    --well: #17241c;
+    --ink: #e8eee6;
+    --ink-soft: #95a597;
+    --rule: #26372c;
+    --danger: #ff6b7c;
+    --shadow: 0 0 0;
+    /* Dark windows on a dark page need a lit edge to read as raised. */
+    --edge: #43604c;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-grass: var(--grass);
+  --color-grass-mown: var(--grass-mown);
+  --color-grass-deep: var(--grass-deep);
+  --color-chalk: var(--chalk);
+  --color-paper: var(--paper);
+  --color-well: var(--well);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-rule: var(--rule);
+  --color-card: var(--card);
+  --color-card-ink: var(--card-ink);
+  --color-edge: var(--edge);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-jersey), var(--font-archivo), sans-serif;
+  --font-dots: var(--font-doto), ui-monospace, monospace;
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Low-fi shape rule: everything is 4px or square. */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--grass);
+    color: var(--ink);
+    font-family: var(--font-sans);
+  }
+  ::selection {
+    background: var(--card);
+    color: var(--card-ink);
+  }
+  /* Two-tone ring: yellow on a dark rim, visible on grass, paper and yellow buttons alike. */
+  :focus-visible {
+    outline: 3px solid var(--card);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 7px var(--card-ink);
+  }
+}
+
+/* Display type: pixel shirt lettering. */
+@utility font-signage {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+/* The low-fi kit: ink outline and a hard shadow that a press pushes into. */
+@utility lofi {
+  border: 2px solid var(--card-ink);
+  box-shadow: 4px 4px 0 var(--card-ink);
+}
+@utility lofi-press {
+  transition:
+    translate 120ms,
+    box-shadow 120ms;
+  &:hover {
+    translate: 0 -1px;
+    box-shadow: 5px 5px 0 var(--card-ink);
+  }
+  &:active {
+    translate: 3px 3px;
+    box-shadow: 1px 1px 0 var(--card-ink);
+  }
+}
+
+/* The stadium's big screen: dark glass whatever the system theme. */
+@layer components {
+  /* The studio stage: dark pixel concrete behind the graphic. (A plain class: Tailwind
+     skipped this one as an @utility.) */
+  .pixel-stage {
+    background-color: #1a212a;
+    background-image: url("/lofi/stage-light.png");
+    background-size: 96px 96px;
+    image-rendering: pixelated;
+  }
+  @media (prefers-color-scheme: dark) {
+    .pixel-stage {
+      background-image: url("/lofi/stage.png");
+    }
+  }
+
+  /* "Fix it" lands on a field: a yellow card ring that blinks, then stays until focus
+     moves on. */
+  [data-flash] {
+    animation: field-flash 1.6s step-end 1;
+    outline: 3px solid var(--card);
+    outline-offset: 2px;
+  }
+  /* On phones, fields scrolled to (by "Fix it" or by focusing them) stay clear of the
+     sticky preview above and the tab bar below. Studio sets --preview-h. */
+  .studio-panel :is(input, textarea, button, [id^="field-"]) {
+    scroll-margin-top: calc(var(--preview-h, 0px) + 16px);
+    scroll-margin-bottom: 104px;
+    @media (min-width: 1024px) {
+      scroll-margin-top: 16px;
+      scroll-margin-bottom: 16px;
+    }
+  }
+
+  /* Real paper stays paper in dark mode (the team sheet on the landing page). */
+  .paper-theme {
+    --paper: #fbfcfa;
+    --well: #eef2ec;
+    --ink: #0d1a12;
+    --ink-soft: #4b5b50;
+    --rule: #d2dbd1;
+    color-scheme: light;
+  }
+
+  .screen-theme {
+    --paper: #0c1117;
+    --well: #161e27;
+    --ink: #e9efe7;
+    --ink-soft: #a3b2bf;
+    --rule: #2c3947;
+    --danger: #ff6b7c;
+    color-scheme: dark;
+  }
+}
+
+/* A pixel turf tile, scaled up without smoothing. */
+@utility pixel-turf {
+  background-color: var(--grass);
+  background-image: url("/lofi/turf.png");
+  background-size: var(--turf-size, 128px) var(--turf-size, 128px);
+  image-rendering: pixelated;
+  @media (prefers-color-scheme: dark) {
+    background-image: url("/lofi/turf-night.png");
+  }
+}
+
+/* Mown grass, striped the way a groundsman cuts it. */
+@utility turf {
+  background-color: var(--grass);
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--grass) 0 var(--stripe, 72px),
+    var(--grass-mown) var(--stripe, 72px) calc(var(--stripe, 72px) * 2)
+  );
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule) transparent;
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes field-flash {
+  0%,
+  45%,
+  70% {
+    outline: 3px solid var(--card);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 7px var(--card-ink);
+  }
+  35%,
+  100% {
+    outline-color: transparent;
+    box-shadow: none;
+  }
+}
+
+@keyframes pixel-out {
+  to {
+    opacity: 0;
+    scale: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

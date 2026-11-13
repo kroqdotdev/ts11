@@ -1,0 +1,121 @@
+name: Deploy
+
+# Deploys teamsheet11.com. Builds the image on the maintainer's self-hosted runner (label
+# "proxmox") and ships it to the web server with docker load, so the server never builds.
+# Runs on every push to main; running it by hand with an older commit rolls back to it.
+#
+# Only main's own code runs here: pull requests (including from forks) use ci.yml on
+# GitHub's runners, and the "production" environment, which holds the deploy key, only
+# accepts main. That key may only run a fixed deploy command on the server (forced in its
+# authorized_keys line): env, load, up and status. No shell, no other app's images.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "The commit, branch or tag to deploy. An older one rolls back to it."
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: proxmox
+    timeout-minutes: 30
+    environment: production
+    # One deploy at a time; a push during a deploy waits for it.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      REF: ${{ inputs.ref || github.sha }}
+      SITE: https://teamsheet11.com
+      # The build record is an artifact on every run, stored against the private repo's quota.
+      DOCKER_BUILD_RECORD_UPLOAD: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Prepare SSH
+        # The key and config go in the job's temporary folder, not ~/.ssh: the runner keeps
+        # its home between jobs and empties that folder when the job ends (the last step
+        # removes them too). The ssh on the PATH reads that config.
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          dir="$RUNNER_TEMP/ssh"
+          real=$(command -v ssh)
+          mkdir -p "$dir" "$RUNNER_TEMP/bin" && chmod 700 "$dir"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$dir/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$dir/known_hosts"
+          chmod 600 "$dir/deploy_key" "$dir/known_hosts"
+          cat > "$dir/config" <<CFG
+          Host box
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            IdentityFile $dir/deploy_key
+            IdentitiesOnly yes
+            UserKnownHostsFile $dir/known_hosts
+            ConnectTimeout 10
+            ServerAliveInterval 15
+            ServerAliveCountMax 4
+          CFG
+          printf '#!/bin/sh\nexec %s -F %s "$@"\n' "$real" "$dir/config" > "$RUNNER_TEMP/bin/ssh"
+          chmod 755 "$RUNNER_TEMP/bin/ssh"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      # compose.yml names .env.production, so `docker compose` needs the file to exist. It
+      # is read at runtime on the server; .dockerignore keeps it out of the image. The
+      # last steps delete it and the image from the runner.
+      - name: Fetch the env files
+        run: ssh box env | tar -xf -
+
+      # Docker's own builder keeps its layers on the runner between deploys. --pull looks up
+      # the base images afresh, so a kept layer never holds back a patched base image.
+      - name: Build
+        run: docker compose build --pull web
+
+      - name: Ship the images
+        # Only the images this repo builds; the box refuses any other name.
+        run: |
+          images=$(docker compose config --format json | jq -r '[.services[] | select(.build) | .image] | unique | .[]')
+          echo "$images"
+          docker save $images | zstd -T0 -3 -q | ssh box load
+
+      - name: Restart
+        # The box checks out this commit (compose file, mounts) and swaps the containers.
+        run: ssh box up "$(git rev-parse HEAD)"
+
+      - name: Check the site
+        run: |
+          for i in $(seq 1 12); do
+            code=$(curl -sL -o /dev/null -w '%{http_code}' "$SITE/" || true)
+            if [ "$code" = 200 ]; then echo "$SITE answers 200"; exit 0; fi
+            sleep 5
+          done
+          ssh box status
+          echo "::error::$SITE answers $code"
+          exit 1
+
+      - name: Forget the key, the env files and the image
+        if: always()
+        run: |
+          rm -rf "${RUNNER_TEMP:?}/ssh" "${RUNNER_TEMP:?}/bin"
+          images=$(docker compose config --format json 2>/dev/null | jq -r '[.services[] | select(.build) | .image] | unique | .[]' || true)
+          [ -z "$images" ] || docker image rm $images >/dev/null 2>&1 || true
+          git clean -ffdxq
+
+      - name: Tidy the runner's images
+        # Build layers a week unused go.
+        if: always()
+        run: |
+          docker image prune -f >/dev/null
+          docker builder prune -f --filter until=168h >/dev/null

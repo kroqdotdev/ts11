@@ -1,0 +1,8 @@
+.next
+out
+build
+node_modules
+pnpm-lock.yaml
+next-env.d.ts
+.playwright-mcp
+drizzle/meta

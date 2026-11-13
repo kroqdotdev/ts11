@@ -1,0 +1,15 @@
+# The Caddy site for teamsheet11.com (imports shared snippets from the main Caddyfile:
+# `common` for headers and logging, `cf-origin` for the Cloudflare origin certificate).
+teamsheet11.com {
+	import common
+	import cf-origin teamsheet11.com
+	# Images are at most 2 MB; a club save is far smaller. Leave headroom, no more.
+	request_body {
+		max_size 8MB
+	}
+	reverse_proxy teamsheet-11:3000 {
+		# The real visitor address (from CF-Connecting-IP via trusted_proxies); replaces
+		# anything the client sent. The app's per-IP rate limits read this.
+		header_up X-Real-IP {client_ip}
+	}
+}

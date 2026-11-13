@@ -1,0 +1,71 @@
+name: CI
+
+# Runs on GitHub's own runners for every pull request and push, including pull requests
+# from forks. It never gets secrets and never touches the deploy runner.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint, format, unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm test
+      - name: Production build
+        run: pnpm build
+        env:
+          TS11_BUILD: "1"
+          DATABASE_PATH: ":memory:"
+
+  browser:
+    name: Browser tests and graphics layout check
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Start the dev server
+        run: |
+          {
+            echo "BETTER_AUTH_URL=http://localhost:3000"
+            echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)"
+            echo "TS11_RELAXED_RATE_LIMITS=1"
+          } > .env.local
+          pnpm dev --port 3000 > dev.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/api/auth/ok > /dev/null && exit 0
+            sleep 2
+          done
+          cat dev.log
+          exit 1
+      - name: Graphics layout check
+        run: pnpm check:graphics
+      - name: Browser tests
+        run: pnpm test:e2e
+      - name: Dev server log
+        if: failure()
+        run: tail -n 200 dev.log

@@ -1,0 +1,15 @@
+# Continuous backup of the account database to Hetzner Object Storage (bucket ts11).
+# Credentials come from the environment (S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY).
+dbs:
+  - path: /data/teamsheet11.db
+    replica:
+      type: s3
+      bucket: ${LITESTREAM_BUCKET}
+      path: ${LITESTREAM_PATH}
+      endpoint: ${S3_ENDPOINT}
+      region: ${S3_REGION}
+      force-path-style: true
+      access-key-id: ${S3_ACCESS_KEY_ID}
+      secret-access-key: ${S3_SECRET_ACCESS_KEY}
+      # Keep three days of point-in-time history.
+      retention: 72h
