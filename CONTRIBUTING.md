@@ -49,6 +49,8 @@ migration: `pnpm db:generate`, and commit the files it writes to `drizzle/`.
   Reuse `src/components/ui/controls.tsx` and `src/components/lofi/Window.tsx` instead of new
   styles.
 - **Signed out must keep working.** Accounts are optional; nothing may require one.
+- **Account screens** follow [docs/design/accounts.md](docs/design/accounts.md); update its
+  pre-flight table when you change them.
 - **Copy** is plain and in sentence case. Say what happens ("Download PNG", not "Submit").
 - **Accessibility:** keyboard access, visible focus, labels on inputs, reduced motion respected.
 - **Server code** lives in `src/server/` and imports `server-only`. Check the signed-in user
