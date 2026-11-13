@@ -1,5 +1,5 @@
 # teamsheet11: Next.js standalone server with SQLite (better-sqlite3) and sharp.
-FROM node:24-bookworm-slim AS deps
+FROM node:25-bookworm-slim AS deps
 WORKDIR /app
 # Build tools for better-sqlite3 in case no prebuilt binary matches.
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
@@ -14,7 +14,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1 TS11_BUILD=1 DATABASE_PATH=:memory:
 RUN pnpm build
 
-FROM node:24-bookworm-slim AS run
+FROM node:25-bookworm-slim AS run
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 \
   DATABASE_PATH=/data/teamsheet11.db DEV_DATA_DIR=/data/dev
