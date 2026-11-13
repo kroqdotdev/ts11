@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { SyncProvider } from "@/components/sync/SyncProvider";
+import { LazySync } from "@/components/sync/LazySync";
 import { AppToaster } from "@/components/ui/AppToaster";
 import { fontVariables } from "@/lib/fonts";
 import { APP_NAME } from "@/lib/brand";
@@ -27,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         {children}
         <AppToaster />
-        <SyncProvider />
+        <LazySync />
       </body>
     </html>
   );

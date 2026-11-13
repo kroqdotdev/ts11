@@ -18,6 +18,8 @@ export function Wordmark({ className = "" }: { className?: string }) {
   return (
     <Link
       href="/"
+      // The home page is heavy (it renders sample graphics); fetch it on click, not on view.
+      prefetch={false}
       aria-label={`${APP_NAME} home`}
       className={`inline-flex items-center gap-[0.22em] rounded-md text-[26px] leading-none ${className}`}
     >
