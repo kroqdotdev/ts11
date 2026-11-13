@@ -11,12 +11,23 @@ import {
 } from "next/font/google";
 import type { FontId } from "./types";
 
-/* Archivo doubles as the interface face; its width axis drives the condensed headings. */
+/*
+ * Archivo twice: the interface uses the weight-only cut (34 KB, preloaded, so text on
+ * every page paints quickly); the graphics use the cut with the width axis (87 KB),
+ * which drives their condensed headings and loads when a graphic needs it.
+ */
+const archivoUi = Archivo({
+  subsets: ["latin"],
+  variable: "--font-archivo-ui",
+  display: "swap",
+});
+
 export const archivo = Archivo({
   subsets: ["latin"],
   axes: ["wdth"],
   variable: "--font-archivo",
   display: "swap",
+  preload: false,
 });
 
 const anton = Anton({
@@ -61,7 +72,18 @@ const doto = Doto({
 /* A pixel face cut from sports-shirt lettering: the low-fi display type, and a graphic option. */
 const jersey = Jersey_10({ subsets: ["latin"], weight: "400", variable: "--font-jersey" });
 
-export const fontVariables = [archivo, anton, bebas, shoulders, oswald, teko, barlow, doto, jersey]
+export const fontVariables = [
+  archivoUi,
+  archivo,
+  anton,
+  bebas,
+  shoulders,
+  oswald,
+  teko,
+  barlow,
+  doto,
+  jersey,
+]
   .map((f) => f.variable)
   .join(" ");
 

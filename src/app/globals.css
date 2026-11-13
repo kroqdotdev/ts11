@@ -65,8 +65,8 @@
   --color-card-ink: var(--card-ink);
   --color-edge: var(--edge);
   --color-danger: var(--danger);
-  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-jersey), var(--font-archivo), sans-serif;
+  --font-sans: var(--font-archivo-ui), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-jersey), var(--font-archivo-ui), sans-serif;
   --font-dots: var(--font-doto), ui-monospace, monospace;
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   /* Low-fi shape rule: everything is 4px or square. */
