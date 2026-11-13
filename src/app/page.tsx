@@ -260,6 +260,9 @@ export default function Home() {
             <a className="underline-offset-4 hover:text-chalk hover:underline" href={SOURCE_URL}>
               Source code
             </a>
+            <a className="underline-offset-4 hover:text-chalk hover:underline" href="/privacy">
+              Privacy
+            </a>
             <a className="underline-offset-4 hover:text-chalk hover:underline" href="/account">
               Your account
             </a>

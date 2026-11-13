@@ -458,6 +458,13 @@ export function AuthDialog() {
           <GoogleButton />
           <Divider>or with email</Divider>
           {mode === "signin" ? <SignInForm /> : <SignUpForm />}
+          <p className="text-xs text-ink-soft">
+            What an account stores and where:{" "}
+            <a className="underline underline-offset-4 hover:text-ink" href="/privacy">
+              privacy
+            </a>
+            .
+          </p>
         </div>
       )}
       {mode === "reset" && <ResetForm />}
