@@ -8,6 +8,9 @@ teamsheet11.com {
 		max_size 8MB
 	}
 	reverse_proxy teamsheet-11:3000 {
+		# While a deploy swaps the container, wait for it (up to 30 s) instead of a 502.
+		lb_try_duration 30s
+		lb_try_interval 250ms
 		# The real visitor address (from CF-Connecting-IP via trusted_proxies); replaces
 		# anything the client sent. The app's per-IP rate limits read this.
 		header_up X-Real-IP {client_ip}
