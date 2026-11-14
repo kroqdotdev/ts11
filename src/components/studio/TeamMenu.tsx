@@ -1,11 +1,9 @@
 "use client";
 
-import { SOURCE_URL } from "@/lib/brand";
 import {
   ArrowCounterClockwiseIcon,
   DotsThreeIcon,
   DownloadSimpleIcon,
-  GithubLogoIcon,
   PlusIcon,
   TrashIcon,
   UploadSimpleIcon,
@@ -102,12 +100,6 @@ export function TeamMenu() {
             icon: <ArrowCounterClockwiseIcon size={16} />,
             danger: true,
             onSelect: () => setConfirm("reset"),
-          },
-          "separator",
-          {
-            label: "Source code",
-            icon: <GithubLogoIcon size={16} />,
-            onSelect: () => window.open(SOURCE_URL, "_blank", "noopener"),
           },
         ]}
       />

@@ -256,17 +256,6 @@ export default function Home() {
         <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-3 px-4 pt-2 pb-10 text-sm text-chalk/70 md:flex-row md:items-center md:justify-between md:px-8">
           <Wordmark />
           <p>Free match day graphics for grassroots and semi-pro clubs.</p>
-          <p className="flex gap-4">
-            <a className="underline-offset-4 hover:text-chalk hover:underline" href={SOURCE_URL}>
-              Source code
-            </a>
-            <a className="underline-offset-4 hover:text-chalk hover:underline" href="/privacy">
-              Privacy
-            </a>
-            <a className="underline-offset-4 hover:text-chalk hover:underline" href="/account">
-              Your account
-            </a>
-          </p>
         </div>
       </footer>
     </div>

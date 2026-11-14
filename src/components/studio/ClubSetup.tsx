@@ -1,12 +1,10 @@
 "use client";
 
-import { AuthDialog, useAuthDialog } from "@/components/account/AuthDialog";
 import { SetupForm } from "@/components/setup/SetupForm";
 import { StadiumScene } from "@/components/setup/StadiumScene";
 import { useSetupFlow } from "@/components/setup/useSetupFlow";
 import { Wordmark } from "@/components/Wordmark";
 import { useRouter } from "next/navigation";
-import { useSession } from "@/lib/auth-client";
 import { useStudio, useUi } from "@/lib/store";
 
 /**
@@ -18,10 +16,6 @@ export function ClubSetup({ first }: { first: boolean }) {
   const setSetupOpen = useUi((s) => s.setSetupOpen);
   const setIntro = useUi((s) => s.setIntro);
   const router = useRouter();
-  const showSignIn = useAuthDialog((s) => s.show);
-  const { data: session, isPending } = useSession();
-  // Someone already set up on another device: signing in brings their clubs here.
-  const offerSignIn = first && !isPending && !session?.user;
   const flow = useSetupFlow({
     first,
     onDone: () => {
@@ -46,15 +40,6 @@ export function ClubSetup({ first }: { first: boolean }) {
             <Wordmark className="text-[22px]" />
           </span>
           <div className="flex items-center gap-2">
-            {offerSignIn && (
-              <button
-                type="button"
-                onClick={() => showSignIn("signin")}
-                className="rounded-[4px] px-3 py-1.5 text-sm font-medium text-chalk underline-offset-4 hover:underline"
-              >
-                Already have an account? Sign in
-              </button>
-            )}
             <button
               type="button"
               onClick={first ? skipSetup : () => setSetupOpen(false)}
@@ -63,7 +48,6 @@ export function ClubSetup({ first }: { first: boolean }) {
               {first ? "Try the example club" : "Cancel"}
             </button>
           </div>
-          <AuthDialog />
         </header>
       }
     />
