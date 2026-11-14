@@ -41,3 +41,28 @@ sync state from `src/lib/sync/state.ts`; auth from `src/lib/auth-client.ts`.
 `pnpm check`, `pnpm test`, `pnpm test:e2e` and `pnpm check:graphics` pass; every acceptance check
 in pass 3 is captured again on the rebuilt screens (light and dark, 1280 px and 390 px); and the
 results are recorded below.
+
+## Results
+
+Rebuilt by an agent working from this plan only (the old files were removed in fe595eb and not
+read). Files: the nine contract files, plus `authDialogStore.ts`, `messages.ts`, `EmailText.tsx`,
+`StorageMeter.tsx`, `ImagesWindow.tsx` and `DeleteAccount.tsx`.
+
+- `pnpm check`, `pnpm test` (29), `pnpm test:e2e` (sync 7, auth 7, images 6) and
+  `pnpm check:graphics` (1296, 0 faults) pass.
+- Every pass-3 acceptance check passes on the rebuilt screens, captured in light and dark at
+  1280 px and 390 px (84 captures). Two things were fixed after looking at them: the account
+  menu now wraps the address after the `@`, and the offline chip keeps its label on phones.
+- Screens: [account, dark](screens/pass-4-account-dark.webp),
+  [account, light](screens/pass-4-account-light.webp), [sign-in](screens/pass-4-signin.webp),
+  [merge](screens/pass-4-merge.webp), [reset](screens/pass-4-reset.webp),
+  [delete](screens/pass-4-delete.webp), [menu and chip](screens/pass-4-menu-chip.webp).
+
+Changes from pass 1 that came out of building from the plan:
+
+- The landing page loads the sign-in dialog and auth client only when "Sign in" is clicked.
+- Deleting the account also clears this browser's sync record, so a later sign-up here can't
+  replace the clubs the confirmation says are kept.
+- "Sign out and clear this browser" refuses (with a message) while changes are unsaved, so the
+  only copy isn't wiped.
+- No arrow icons in links; the storage meter's filled blocks use the ink colour.
