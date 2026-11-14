@@ -33,6 +33,11 @@ const GLYPHS: Record<string, string> = {
   Æ: "01111 10100 10100 11111 10100 10100 10111",
   Ø: "01111 10011 10101 10101 10101 11001 11110",
   Å: "01110 01010 01110 10001 11111 10001 10001",
+  Œ: "01111 10100 10100 10111 10100 10100 01111",
+  Ł: "10000 10000 10100 11000 10000 10000 11111",
+  Đ: "01110 01001 01001 11101 01001 01001 01110",
+  Ð: "01110 01001 01001 11101 01001 01001 01110",
+  Þ: "10000 11110 10001 10001 11110 10000 10000",
   "0": "01110 10001 10011 10101 11001 10001 01110",
   "1": "00100 01100 00100 00100 00100 00100 01110",
   "2": "01110 10001 00001 00010 00100 01000 11111",
@@ -59,24 +64,92 @@ const GLYPHS: Record<string, string> = {
 export const GLYPH_W = 5;
 export const GLYPH_H = 7;
 
+/**
+ * Accented capitals (Ä, É, Ñ, Č…) are drawn the way LED signs do it: the mark in the top
+ * row, a blank row, then the letter in five rows. A cedilla or ogonek (Ç, Ą) goes in the
+ * bottom row under the letter in six rows. One row is little room, so a caret and a dot
+ * above share a shape.
+ */
+const BODY5: Record<string, string> = {
+  A: "01110 10001 11111 10001 10001",
+  C: "01111 10000 10000 10000 01111",
+  D: "11110 10001 10001 10001 11110",
+  E: "11111 10000 11110 10000 11111",
+  G: "01111 10000 10011 10001 01111",
+  I: "01110 00100 00100 00100 01110",
+  L: "10000 10000 10000 10000 11111",
+  N: "10001 11001 10101 10011 10001",
+  O: "01110 10001 10001 10001 01110",
+  R: "11110 10001 11110 10010 10001",
+  S: "01111 10000 01110 00001 11110",
+  T: "11111 00100 00100 00100 00100",
+  U: "10001 10001 10001 10001 01110",
+  Y: "10001 01010 00100 00100 00100",
+  Z: "11111 00010 00100 01000 11111",
+};
+
+const BODY6: Record<string, string> = {
+  A: "01110 10001 10001 11111 10001 10001",
+  C: "01110 10001 10000 10000 10001 01110",
+  E: "11111 10000 11110 10000 10000 11111",
+  S: "01111 10000 01110 00001 00001 11110",
+  T: "11111 00100 00100 00100 00100 00100",
+};
+
+/** Combining marks drawn in the top row. */
+const ABOVE: Record<string, string> = {
+  "\u0308": "01010", // diaeresis: Ä Ö Ü Ë Ï Ÿ
+  "\u0301": "00010", // acute: É Á Ó Ú Í Ý Ś Ź Ć Ń
+  "\u0300": "01000", // grave: À È Ù Ò
+  "\u0302": "00100", // circumflex: Â Ê Î Ô Û
+  "\u0307": "00100", // dot above: Ż İ Ė
+  "\u030c": "01110", // caron: Č Š Ž Ř Ě Ň Ď Ť
+  "\u0303": "01101", // tilde: Ñ Ã Õ
+  "\u030b": "01001", // double acute: Ő Ű
+  "\u0306": "10001", // breve: Ğ Ă
+  "\u030a": "00100", // ring: Ů (Å has its own glyph)
+};
+
+/** Combining marks drawn in the bottom row, under a letter moved up a row. */
+const BELOW: Record<string, string> = {
+  "\u0327": "00100", // cedilla: Ç Ş Ţ
+  "\u0328": "00010", // ogonek: Ą Ę
+};
+
+/** The glyph rows for one capital letter, or null if the font can't draw it. */
+function rowsFor(ch: string): string | null {
+  if (GLYPHS[ch]) return GLYPHS[ch];
+  const [base, mark, ...rest] = ch.normalize("NFD");
+  if (!base || rest.length) return null;
+  if (mark && BODY5[base] && ABOVE[mark]) return `${ABOVE[mark]} 00000 ${BODY5[base]}`;
+  if (mark && BODY6[base] && BELOW[mark]) return `${BODY6[base]} ${BELOW[mark]}`;
+  // A mark the font has no room for: the plain letter is better than a "?".
+  return GLYPHS[base] ?? null;
+}
+
+/** Capitals in composed form; ß becomes SS here, which keeps widths and drawing in step. */
+function chars(text: string): string[] {
+  return [...text.normalize("NFC").toUpperCase().normalize("NFC")];
+}
+
 const CACHE = new Map<string, boolean[]>();
 
 function glyph(ch: string): boolean[] {
-  const key = ch.toUpperCase();
-  let g = CACHE.get(key);
+  let g = CACHE.get(ch);
   if (!g) {
-    const src = GLYPHS[key] ?? GLYPHS["?"];
+    const src = rowsFor(ch) ?? GLYPHS["?"];
     g = src
       .replace(/ /g, "")
       .split("")
       .map((c) => c === "1");
-    CACHE.set(key, g);
+    CACHE.set(ch, g);
   }
   return g;
 }
 
 export function textWidth(text: string, scale = 1): number {
-  return text.length === 0 ? 0 : (text.length * (GLYPH_W + 1) - 1) * scale;
+  const n = chars(text).length;
+  return n === 0 ? 0 : (n * (GLYPH_W + 1) - 1) * scale;
 }
 
 /** Calls `plot` for every lit pixel of `text` drawn at (x, y). */
@@ -88,7 +161,7 @@ export function eachTextPixel(
   plot: (px: number, py: number) => void,
 ) {
   let cx = x;
-  for (const ch of text) {
+  for (const ch of chars(text)) {
     const g = glyph(ch);
     for (let r = 0; r < GLYPH_H; r++) {
       for (let c = 0; c < GLYPH_W; c++) {
@@ -102,14 +175,14 @@ export function eachTextPixel(
 }
 
 /**
- * Reduces any text to what the pixel font can draw: A to Z, Æ, Ø and Å, digits and a
- * little punctuation. Other accents are dropped (É → E).
+ * Reduces any text to what the pixel font can draw: capitals including the accented
+ * ones of most European languages (Æ Ø Å Ä Ö Ü É Ñ Č Ł…), digits and a little
+ * punctuation. Anything else (emoji, other scripts) is left out.
  */
 export function toBoardText(text: string): string {
-  return text
-    .toUpperCase()
-    .replace(/[^ÆØÅ]/g, (ch) => ch.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))
-    .replace(/[^A-Z0-9ÆØÅ \-:.,!?'&+/]/g, "")
+  return chars(text)
+    .map((ch) => (/\s/.test(ch) ? " " : rowsFor(ch) ? ch : ""))
+    .join("")
     .replace(/\s+/g, " ")
     .trim();
 }
