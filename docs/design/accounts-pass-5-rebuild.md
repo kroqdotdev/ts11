@@ -109,3 +109,33 @@ Deviations:
   kept for screen readers. The full label overflowed the header at 390 px.
 - At 390 px "Try the example club" still wraps to two lines next to it. It wrapped before this
   pass too; left as is.
+
+### Review against the brief and pre-flight
+
+The design read, tokens and library picks are the ones in [accounts.md](accounts.md); this pass adds
+no new tokens, components or dependencies. Checked on 14 November 2026 over the six files above.
+
+| Check                                | Result                                                                                                                                                                                                                                        |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Generic defaults avoided             | Pass: the privacy page is a `privacy.txt` window on the pitch, like the studio's windows, not a centred legal page; the emails reuse the window shape (grass title bar, 2px ink border, card-yellow button) instead of a stock email template |
+| Zero em or en dashes in visible text | Pass: none found                                                                                                                                                                                                                              |
+| One accent colour                    | Pass: card yellow only (`#f7c600` in the emails)                                                                                                                                                                                              |
+| One corner system                    | Pass: 4px windows and buttons on the pages; square boxes in the emails                                                                                                                                                                        |
+| Contrast (AA)                        | Pass: ink on card 11.1:1, white on grass 13.5:1, footer ink-soft on paper 7.0:1, link on paper 13.1:1                                                                                                                                         |
+| No wrapped CTA labels on desktop     | Pass at 1280 px; on phones the setup link is shortened (see deviations)                                                                                                                                                                       |
+| Eyebrows, arrows, middle-dot meta    | Pass: none                                                                                                                                                                                                                                    |
+| Serif, italic display type           | Pass: none                                                                                                                                                                                                                                    |
+| Dark mode                            | Pass: privacy and reset captured in both themes                                                                                                                                                                                               |
+| Mobile                               | Pass: privacy, reset, footer and setup captured at 390 px, emails at 360 px                                                                                                                                                                   |
+| `min-h-dvh`, never `h-screen`        | Pass                                                                                                                                                                                                                                          |
+| Copy self-audit                      | Pass: plain verbs, one job per line; the email button says what happens ("Confirm email", "Choose a new password")                                                                                                                            |
+
+### Landing contrast
+
+A Lighthouse contrast check on the landing page failed on the "Half time" sample. The graphic itself
+reads well (white on dark green). The cause was the block look's gold edging: a layer covering
+the whole frame, cut to a thin diagonal with `clip-path`. Contrast checkers ignore `clip-path`, so
+they took gold as the ground behind all the text. The panel and edging layers now start where
+their shapes do (`src/components/graphics/parts.tsx`); the picture is unchanged (12 anti-aliased
+pixels differ by at most 4/255). Lighthouse colour contrast on the landing page now scores 1, and
+`pnpm check:graphics` still finds no faults in 1,296 graphics.

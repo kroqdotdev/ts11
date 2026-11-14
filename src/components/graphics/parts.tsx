@@ -185,25 +185,38 @@ function Backdrop({
     const top = w * (theme.wide ? 0.95 : 0.95);
     const bottom = theme.right + 24 * u;
     const edge = 14 * u;
+    // Each layer's box starts where its shape does, not at the frame's left edge, so
+    // contrast checkers (which ignore clip-path) don't read the edging as the ground
+    // behind the type.
+    const x0 = Math.min(top, bottom);
     layers.push(
       <div
         key="panel"
         style={{
           position: "absolute",
-          inset: 0,
+          top: 0,
+          bottom: 0,
+          left: x0,
+          right: 0,
           background: light
             ? `linear-gradient(160deg, ${trim}, ${tonal(trim, 0.25)})`
             : `linear-gradient(160deg, ${tonal(primary, 0.2)}, ${tonal(primary, 0.36)})`,
-          clipPath: `polygon(${top}px 0, 100% 0, 100% 100%, ${bottom}px 100%)`,
+          // The gradient still spans the whole frame, as before.
+          backgroundSize: `${w}px 100%`,
+          backgroundPosition: `${-x0}px 0`,
+          clipPath: `polygon(${top - x0}px 0, 100% 0, 100% 100%, ${bottom - x0}px 100%)`,
         }}
       />,
       <div
         key="edge"
         style={{
           position: "absolute",
-          inset: 0,
+          top: 0,
+          bottom: 0,
+          left: x0,
+          width: Math.abs(top - bottom) + edge,
           background: light ? mix(trim, primary, 0.55) : secondary,
-          clipPath: `polygon(${top}px 0, ${top + edge}px 0, ${bottom + edge}px 100%, ${bottom}px 100%)`,
+          clipPath: `polygon(${top - x0}px 0, ${top - x0 + edge}px 0, ${bottom - x0 + edge}px 100%, ${bottom - x0}px 100%)`,
         }}
       />,
     );
