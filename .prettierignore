@@ -6,3 +6,6 @@ pnpm-lock.yaml
 next-env.d.ts
 .playwright-mcp
 drizzle/meta
+
+# Pages saved from dbu.dk for the parser tests: kept as DBU serves them.
+tests/unit/fixtures/

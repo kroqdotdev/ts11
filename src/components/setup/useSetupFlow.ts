@@ -3,6 +3,8 @@
 import { useReducedMotion } from "motion/react";
 import { useState, useSyncExternalStore } from "react";
 import type { StadiumProps } from "@/components/lofi/LofiStadium";
+import { crestKindOf } from "@/lib/crest";
+import { matchFromFixture, nextFixture, toFixtures, type DbuImport } from "@/lib/dbu";
 import { blankTeam, defaultDesign, defaultMatch } from "@/lib/demo";
 import { FORMATIONS, formationSlots } from "@/lib/formation";
 import { initials } from "@/lib/format";
@@ -11,7 +13,7 @@ import { uid } from "@/lib/id";
 import { KITS, type Kit } from "@/lib/kits";
 import { autoLineup, readSquad } from "@/lib/squad";
 import { flushStorage, useStudio } from "@/lib/store";
-import type { Colors, LookId, Player, Team, TeamSize } from "@/lib/types";
+import type { Colors, DbuLink, Fixture, LookId, Player, Team, TeamSize } from "@/lib/types";
 
 export const STEPS = ["Name", "Crest", "Kit", "Squad"] as const;
 export const PATTERNS: LookId[] = ["block", "stripes", "hoops", "halves", "sash"];
@@ -31,6 +33,8 @@ export interface Draft {
   restored: string[];
   /** Colours typed in by hand, kept so picking a preset never loses them. */
   custom: Colors | null;
+  /** Fixtures imported from DBU, and the teams they came from. */
+  dbu: { link: DbuLink; fixtures: Fixture[] } | null;
 }
 
 /** The draft as a club on a sample fixture, for the preview on the first steps. */
@@ -68,8 +72,12 @@ function buildTeam(d: Draft, id: string): Team {
     number,
     position,
   }));
+  const next = d.dbu ? nextFixture(d.dbu.fixtures) : null;
   return {
     ...base,
+    ...(d.dbu ? { fixtures: d.dbu.fixtures, dbu: d.dbu.link } : {}),
+    // The next game is ready on the matchday graphic.
+    match: next ? matchFromFixture(base.match, next) : base.match,
     name: d.name.trim() || "My club",
     shortName: (d.shortName.trim() || initials(d.name || "My club")).toUpperCase(),
     crest: d.crest,
@@ -152,6 +160,7 @@ export function useSetupFlow({
     squad: "",
     restored: [],
     custom: null,
+    dbu: null,
   });
 
   /** True once the kit has been picked in the setup itself (not just carried in). */
@@ -186,6 +195,23 @@ export function useSetupFlow({
           look: kit.look,
         }));
     }
+  }
+
+  /** Fills the club in from DBU: name, crest, colours and fixtures. */
+  async function importDbu(data: DbuImport, link: DbuLink) {
+    const crest = data.club.crest;
+    const crestKind = crest ? await crestKindOf(crest) : undefined;
+    const colors = data.club.colors;
+    setD((prev) => ({
+      ...prev,
+      name: data.club.name,
+      shortName: prev.shortEdited ? prev.shortName : initials(data.club.name, 4),
+      ...(crest ? { crest, crestKind } : {}),
+      // DBU names the colours, not the pattern, so a plain shirt is the honest start.
+      ...(colors ? { colors, custom: colors, look: "block" as const } : {}),
+      dbu: { link, fixtures: toFixtures(data) },
+    }));
+    if (colors) setKitTouched(true);
   }
 
   function finish() {
@@ -257,6 +283,7 @@ export function useSetupFlow({
     kickoff,
     finish,
     begin,
+    importDbu,
     parsed,
     ignored: read.ignored,
     restore: (key: string) => setD((prev) => ({ ...prev, restored: [...prev.restored, key] })),

@@ -1,13 +1,14 @@
 "use client";
 
-import { ArrowLeftIcon, CheckIcon, PaletteIcon } from "@phosphor-icons/react";
+import { ArrowLeftIcon, CheckIcon, DownloadSimpleIcon, PaletteIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useId, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Graphic } from "@/components/graphics/Graphic";
 import { LOOKS } from "@/components/graphics/theme";
 import { ScaledGraphic } from "@/components/landing/ScaledGraphic";
 import { BadgePreview } from "@/components/BadgePreview";
+import { DbuImportDialog } from "@/components/dbu/DbuImportDialog";
 import { KitShirt } from "@/components/KitShirt";
 import { Window } from "@/components/lofi/Window";
 import {
@@ -118,6 +119,38 @@ function KitPicker({ flow }: { flow: SetupFlow }) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/** "Club in Denmark?": fill the club in from DBU instead of typing it. */
+function DbuStart({ flow }: { flow: SetupFlow }) {
+  const { d, importDbu } = flow;
+  const [open, setOpen] = useState(false);
+  const count = d.dbu?.fixtures.length ?? 0;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-[4px] border-2 border-dashed border-ink/25 px-3 py-2.5">
+      <p className="min-w-0 flex-1 text-[13px] leading-snug text-ink-soft">
+        {d.dbu ? (
+          <>
+            <CheckIcon size={13} weight="bold" className="mr-1 inline text-ink" aria-hidden />
+            Imported from DBU with {count === 1 ? "1 fixture" : `${count} fixtures`}.
+          </>
+        ) : (
+          "Club in Denmark? Bring in your crest, colours and fixtures from DBU."
+        )}
+      </p>
+      <Button size="sm" onClick={() => setOpen(true)}>
+        <DownloadSimpleIcon size={14} weight="bold" />
+        {d.dbu ? "Change" : "Import from DBU"}
+      </Button>
+      <DbuImportDialog
+        open={open}
+        onOpenChange={setOpen}
+        initialQuery={d.name}
+        link={d.dbu?.link}
+        onImport={(data, link) => importDbu(data, link)}
+      />
     </div>
   );
 }
@@ -271,9 +304,14 @@ export function SetupForm({
                     />
                   </div>
                 </div>
+                <DbuStart flow={flow} />
                 <DraftPreview
                   flow={flow}
-                  note="Your badge until you add a crest. Colours come next."
+                  note={
+                    d.dbu && d.crest
+                      ? "Your crest from DBU. You can change it next."
+                      : "Your badge until you add a crest. Colours come next."
+                  }
                 />
               </Question>
             )}

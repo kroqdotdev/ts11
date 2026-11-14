@@ -109,6 +109,11 @@ export default function Page() {
               on our instructions.
             </p>
             <p>
+              If you import a Danish club from DBU, our server looks up the club name you type on
+              dbu.dk&apos;s public results pages. DBU sees a request from our server, not from you,
+              and nothing about you is sent.
+            </p>
+            <p>
               Uploaded images can be opened by anyone who has their exact link. The links are long
               and random, but don&apos;t upload anything private.
             </p>

@@ -16,6 +16,7 @@ function inlineUrls(teams: Team[], design: Design): string[] {
   for (const t of teams) {
     add(t.crest);
     add(t.match.opponentCrest);
+    for (const f of t.fixtures) add(f.opponentCrest);
   }
   add(design.background.image);
   add(design.featureImage);
@@ -28,11 +29,16 @@ function replaceEverywhere(from: string, to: string) {
   const swap = (v: string | null) => (v === from ? to : v);
   useStudio.setState({
     teams: s.teams.map((t) =>
-      t.crest === from || t.match.opponentCrest === from
+      t.crest === from ||
+      t.match.opponentCrest === from ||
+      t.fixtures.some((f) => f.opponentCrest === from)
         ? {
             ...t,
             crest: swap(t.crest),
             match: { ...t.match, opponentCrest: swap(t.match.opponentCrest) },
+            fixtures: t.fixtures.map((f) =>
+              f.opponentCrest === from ? { ...f, opponentCrest: to } : f,
+            ),
           }
         : t,
     ),
