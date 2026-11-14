@@ -68,9 +68,14 @@ export function looksLikeEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
-/** Bytes as people read them on this page: whole KB below a megabyte, then MB. */
+/**
+ * Bytes as people read them on this page: whole KB below a megabyte, then MB. Anything
+ * stored shows as at least 1 KB, so a small image never reads as taking no space.
+ */
 export function sizeParts(bytes: number): { value: number; unit: "KB" | "MB"; digits: number } {
-  if (bytes < 1024 * 1024) return { value: Math.round(bytes / 1024), unit: "KB", digits: 0 };
+  if (bytes < 1024 * 1024) {
+    return { value: bytes > 0 ? Math.max(1, Math.round(bytes / 1024)) : 0, unit: "KB", digits: 0 };
+  }
   const mb = bytes / 1024 / 1024;
   return { value: mb, unit: "MB", digits: mb < 10 ? 1 : 0 };
 }
