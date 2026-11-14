@@ -12,6 +12,8 @@ export default defineConfig({
   test: {
     include: ["tests/unit/**/*.test.ts"],
     environment: "node",
+    // next-intl imports `next/navigation` without the `.js` that Node's ESM resolver needs.
+    server: { deps: { inline: ["next-intl"] } },
     env: {
       DATABASE_PATH: ":memory:",
       DEV_DATA_DIR: "./data/test-unit",
