@@ -44,8 +44,11 @@ export interface Draft {
   restored: string[];
   /** Colours typed in by hand, kept so picking a preset never loses them. */
   custom: Colors | null;
-  /** Fixtures imported from DBU, and the teams they came from. */
-  dbu: { link: DbuLink; fixtures: Fixture[] } | null;
+  /**
+   * Fixtures imported from DBU, the teams they came from, and the crest DBU gave (so a
+   * later import knows whether the crest on the draft is DBU's or the person's own).
+   */
+  dbu: { link: DbuLink; fixtures: Fixture[]; crest: string | null } | null;
 }
 
 /** Words the setup puts on the club and its sample graphic, in the interface language. */
@@ -229,15 +232,19 @@ export function useSetupFlow({
     const crest = data.club.crest;
     const crestKind = crest ? await crestKindOf(crest) : undefined;
     const colors = data.club.colors;
-    setD((prev) => ({
-      ...prev,
-      name: data.club.name,
-      shortName: prev.shortEdited ? prev.shortName : initials(data.club.name, 4),
-      ...(crest ? { crest, crestKind } : {}),
-      // DBU names the colours, not the pattern, so a plain shirt is the honest start.
-      ...(colors ? { colors, custom: colors, look: "block" as const } : {}),
-      dbu: { link, fixtures: toFixtures(data) },
-    }));
+    setD((prev) => {
+      // The crest from an earlier import goes with that club; one the person added stays.
+      const ownCrest = !!prev.crest && prev.crest !== prev.dbu?.crest;
+      return {
+        ...prev,
+        name: data.club.name,
+        shortName: prev.shortEdited ? prev.shortName : initials(data.club.name, 4),
+        ...(crest ? { crest, crestKind } : ownCrest ? {} : { crest: null, crestKind: undefined }),
+        // DBU names the colours, not the pattern, so a plain shirt is the honest start.
+        ...(colors ? { colors, custom: colors, look: "block" as const } : {}),
+        dbu: { link, fixtures: toFixtures(data), crest },
+      };
+    });
     if (colors) setKitTouched(true);
   }
 

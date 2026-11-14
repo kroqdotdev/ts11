@@ -100,7 +100,13 @@ async function request(url: string, accept: string): Promise<Response> {
 async function page(path: string): Promise<string> {
   const res = await request(`${DBU_ORIGIN}${path}`, "text/html");
   const type = res.headers.get("content-type") ?? "";
-  const html = await res.text();
+  let html: string;
+  try {
+    html = await res.text();
+  } catch {
+    // The connection dropped, or the time ran out, after the headers came.
+    throw new DbuUnavailable(`DBU stopped answering (${path})`);
+  }
   // Cloudflare's bot check is an HTML page too, but without DBU's layout.
   if (!type.includes("html") || !html.includes("dbu")) {
     throw new DbuUnavailable(`DBU sent something other than its page (${path})`);
@@ -156,9 +162,12 @@ function crest(path: string, side: number): Promise<string | null> {
   return cached(`crest:${side}:${path}`, CLUB_TTL, async () => {
     const res = await request(`https://file.dbu.dk${path}`, "image/*");
     const declared = Number(res.headers.get("content-length") ?? 0);
-    if (declared > MAX_CREST_BYTES) return null;
-    const bytes = Buffer.from(await res.arrayBuffer());
-    if (bytes.byteLength > MAX_CREST_BYTES) return null;
+    if (declared > MAX_CREST_BYTES) {
+      await res.body?.cancel().catch(() => undefined);
+      return null;
+    }
+    const bytes = await readCapped(res, MAX_CREST_BYTES);
+    if (!bytes) return null;
     try {
       const webp = await sharp(bytes, { limitInputPixels: 4096 * 4096 })
         .resize(side, side, { fit: "inside", withoutEnlargement: true })
@@ -169,6 +178,32 @@ function crest(path: string, side: number): Promise<string | null> {
       return null; // Not an image after all.
     }
   });
+}
+
+/**
+ * A response body up to `max` bytes, counted as it arrives (the declared length can be
+ * missing or wrong), or null when it's bigger. Stops reading as soon as it's too big.
+ */
+async function readCapped(res: Response, max: number): Promise<Buffer | null> {
+  if (!res.body) return Buffer.alloc(0);
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > max) {
+        await reader.cancel().catch(() => undefined);
+        return null;
+      }
+      chunks.push(value);
+    }
+  } catch {
+    throw new DbuUnavailable("DBU stopped sending a crest");
+  }
+  return Buffer.concat(chunks);
 }
 
 /** A crest that fails to load is left out rather than failing the whole import. */

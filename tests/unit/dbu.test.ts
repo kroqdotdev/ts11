@@ -16,6 +16,7 @@ import { useStudio } from "@/lib/store";
 import type { Fixture } from "@/lib/types";
 import {
   competitionLabel,
+  DbuUnavailable,
   getClub,
   getImport,
   searchClubs,
@@ -592,5 +593,135 @@ describe("filling a match in from DBU", () => {
       theirScore: 0,
       goals: [],
     });
+  });
+});
+
+describe("review fixes", () => {
+  const fixture = (over: Partial<Fixture>): Fixture => ({
+    id: "f",
+    opponent: "Farum BK",
+    isHome: true,
+    date: "2027-02-13",
+    kickoff: "",
+    competition: "VinterBOLD",
+    score: "",
+    dbuMatchId: "2",
+    dbuPoolId: "9",
+    ...over,
+  });
+
+  it("tells two games on one day apart by DBU's match number", () => {
+    const first = matchFromFixture(defaultMatch(), fixture({ dbuMatchId: "1", kickoff: "10:00" }));
+    const scored = {
+      ...first,
+      goals: [{ id: "g", side: "us" as const, name: "Lund", minute: "5" }],
+    };
+    const second = matchFromFixture(scored, fixture({ dbuMatchId: "2" }));
+    expect(second.goals).toEqual([]);
+    expect(second.dbu?.matchId).toBe("2");
+    // DBU hasn't set the second game's time: the first game's isn't borrowed.
+    expect(second.kickoff).toBe("");
+    // The same game keeps its time and goals.
+    const again = matchFromFixture(scored, fixture({ dbuMatchId: "1" }));
+    expect(again.kickoff).toBe("10:00");
+    expect(again.goals).toHaveLength(1);
+  });
+
+  it("types the scores in when DBU's half-time marker and the minutes disagree", () => {
+    const t = blankTeam("t");
+    t.match = { ...t.match, isHome: true, dbu: { matchId: "1", poolId: "2" } };
+    useStudio.setState({ teams: [t], activeTeamId: t.id });
+    const page: DbuMatchPage = {
+      matchId: "1",
+      home: null,
+      away: null,
+      score: { home: 1, away: 0 },
+      finished: true,
+      hasHalfTime: true,
+      // Written as minute 46, but before DBU's half-time marker.
+      events: [
+        {
+          type: "goal",
+          side: "home",
+          minute: "46",
+          scorer: "A B",
+          assist: "",
+          kind: "open",
+          firstHalf: true,
+        },
+      ],
+    };
+    const plan = planFromDbuMatch(t, page);
+    useStudio.getState().applyDbuMatch(plan, { score: true, lineup: false, subs: false });
+    expect(useStudio.getState().teams[0].match).toMatchObject({
+      autoScore: false,
+      ourScore: 1,
+      theirScore: 0,
+      htOurScore: 1,
+      htTheirScore: 0,
+    });
+  });
+
+  it("imports fixtures into the team that asked, even when another is open", () => {
+    const a = blankTeam("a");
+    const b = blankTeam("b");
+    useStudio.setState({ teams: [a, b], activeTeamId: "b" });
+    const link = { clubId: "1274", teams: [{ teamId: "1", poolId: "2" }] };
+    useStudio.getState().importFixtures("a", link, [fixture({ id: "x" })]);
+    const [after, other] = useStudio.getState().teams;
+    expect(after.fixtures).toHaveLength(1);
+    expect(after.dbu).toEqual(link);
+    expect(other.fixtures).toHaveLength(0);
+    expect(other.dbu).toBeUndefined();
+    useStudio.getState().playFixture("x", "a");
+    expect(useStudio.getState().teams[0].match.opponent).toBe("Farum BK");
+    expect(useStudio.getState().teams[1].match.opponent).toBe("");
+  });
+
+  it("stops reading a crest that turns out too big, with no length given", async () => {
+    const big = new Uint8Array(4 * 1024 * 1024);
+    let pulled = 0;
+    setDbuFetch(async (input) => {
+      const url = new URL(String(input));
+      if (url.hostname === "file.dbu.dk") {
+        const stream = new ReadableStream<Uint8Array>({
+          pull(c) {
+            if (pulled >= big.byteLength) return c.close();
+            c.enqueue(big.subarray(pulled, pulled + 256 * 1024));
+            pulled += 256 * 1024;
+          },
+        });
+        return new Response(stream, { headers: { "content-type": "image/png" } });
+      }
+      const pages: Record<string, string> = {
+        "/resultater/klub/1274/klubinfo": page("klubinfo"),
+        "/resultater/klub/1274/holdoversigt": page("holdoversigt"),
+        "/resultater/hold/218563_502551/kampprogram": page("kampprogram"),
+      };
+      const html = pages[url.pathname];
+      return html
+        ? new Response(html, { headers: { "content-type": "text/html" } })
+        : new Response("", { status: 404 });
+    });
+    const result = (await getImport("1274", [{ teamId: "218563", poolId: "502551" }])) as DbuImport;
+    expect(result.club.crest).toBeNull();
+    expect(result.fixtures).toHaveLength(10);
+    // It stopped soon after 3 MB rather than reading all 4 MB of every crest.
+    expect(pulled).toBeLessThan(big.byteLength * 12);
+    setDbuFetch(null);
+  });
+
+  it("answers 'DBU unavailable' when a page breaks off midway", async () => {
+    setDbuFetch(async () => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(c) {
+          c.enqueue(new TextEncoder().encode("<html>dbu"));
+          c.error(new Error("connection reset"));
+        },
+      });
+      return new Response(stream, { headers: { "content-type": "text/html" } });
+    });
+    await expect(searchClubs("broken off")).rejects.toBeInstanceOf(DbuUnavailable);
+    setDbuFetch(null);
   });
 });

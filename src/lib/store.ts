@@ -16,6 +16,7 @@ import { blankTeam, defaultDesign, defaultMatch, demoTeam } from "./demo";
 import { FORMATIONS, formationSlots, TEAM_SIZES } from "./formation";
 import { pageLanguage } from "./language";
 import { uid } from "./id";
+import { firstHalfGoals } from "./score";
 import { autoLineup } from "./squad";
 import daUi from "../../messages/da/ui.json";
 import enUi from "../../messages/en/ui.json";
@@ -92,16 +93,19 @@ interface Actions {
   updateFixture: (id: string, patch: Partial<Fixture>) => void;
   removeFixture: (id: string) => void;
   /**
-   * Adds fixtures imported from DBU to the active team and remembers where they came
-   * from. Fixtures already here are refreshed in place (see `mergeFixtures`).
+   * Adds fixtures imported from DBU to a team (the one the import was started for, which
+   * may no longer be the active one) and remembers where they came from. Fixtures
+   * already there are refreshed in place (see `mergeFixtures`). A team that has gone
+   * in the meantime gets nothing.
    */
   importFixtures: (
+    teamId: string,
     link: DbuLink,
     fixtures: Fixture[],
     extra?: Partial<Pick<Team, "crest" | "crestKind">>,
   ) => { added: number; updated: number };
-  /** Sets the match graphics' opponent, date and so on from a fixture. */
-  playFixture: (id: string) => void;
+  /** Sets a team's match graphics (the active team's by default) from one of its fixtures. */
+  playFixture: (id: string, teamId?: string) => void;
   /**
    * Fills the match in from DBU's match page: the score and goals, the line-up from
    * the holdkort (adding players the squad doesn't have yet), and substitutions.
@@ -215,6 +219,8 @@ export const useStudio = create<StudioState>()(
       /** Applies `fn` to the active team. */
       const withTeam = (fn: (team: Team) => Team) =>
         set((s) => ({ teams: s.teams.map((t) => (t.id === s.activeTeamId ? fn(t) : t)) }));
+      const withTeamId = (id: string, fn: (team: Team) => Team) =>
+        set((s) => ({ teams: s.teams.map((t) => (t.id === id ? fn(t) : t)) }));
       const withLineup = (fn: (lineup: Lineup, team: Team) => Lineup) =>
         withTeam((t) => ({ ...t, lineup: fn(t.lineup, t) }));
 
@@ -461,9 +467,9 @@ export const useStudio = create<StudioState>()(
           })),
         removeFixture: (id) =>
           withTeam((t) => ({ ...t, fixtures: t.fixtures.filter((f) => f.id !== id) })),
-        importFixtures: (link, incoming, extra = {}) => {
+        importFixtures: (teamId, link, incoming, extra = {}) => {
           let counts = { added: 0, updated: 0 };
-          withTeam((t) => {
+          withTeamId(teamId, (t) => {
             const { fixtures, added, updated } = mergeFixtures(t.fixtures, incoming);
             counts = { added, updated };
             return { ...t, ...extra, fixtures, dbu: link };
@@ -515,16 +521,30 @@ export const useStudio = create<StudioState>()(
                   ? { ...g, playerId: findPlayerByName(players, g.name)?.id ?? null }
                   : g,
               );
+              // Counted from the goals only when that gives DBU's score at full time and
+              // at half time. The minutes put a goal before or after the break; DBU's
+              // timeline marks the break itself, and the two can disagree (a stoppage-time
+              // goal written as "46", halves shorter than 45 minutes). Then DBU's scores
+              // are typed in, so the graphics print what DBU says.
+              const byMinutes = firstHalfGoals(goals);
+              const htAddsUp =
+                !plan.halfTime ||
+                (byMinutes.filter((g) => g.side === "us").length === plan.halfTime.us &&
+                  byMinutes.filter((g) => g.side === "them").length === plan.halfTime.them);
+              const auto = !plan.score || (plan.goalsAddUp && htAddsUp);
               match = {
                 ...match,
                 goals,
                 spotlightGoalId: null,
-                autoScore: plan.goalsAddUp || !plan.score,
-                ...(plan.score && !plan.goalsAddUp
-                  ? { ourScore: plan.score.us, theirScore: plan.score.them }
-                  : {}),
-                ...(plan.halfTime
-                  ? { htOurScore: plan.halfTime.us, htTheirScore: plan.halfTime.them }
+                autoScore: auto,
+                ...(!auto && plan.score
+                  ? {
+                      ourScore: plan.score.us,
+                      theirScore: plan.score.them,
+                      ...(plan.halfTime
+                        ? { htOurScore: plan.halfTime.us, htTheirScore: plan.halfTime.them }
+                        : {}),
+                    }
                   : {}),
               };
             }
@@ -538,11 +558,14 @@ export const useStudio = create<StudioState>()(
             }
             return { ...t, players, lineup, match };
           }),
-        playFixture: (id) =>
-          withTeam((t) => {
+        playFixture: (id, teamId) => {
+          const play = (t: Team) => {
             const f = t.fixtures.find((x) => x.id === id);
             return f ? { ...t, match: matchFromFixture(t.match, f) } : t;
-          }),
+          };
+          if (teamId) withTeamId(teamId, play);
+          else withTeam(play);
+        },
         addSub: () =>
           withTeam((t) => ({
             ...t,

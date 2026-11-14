@@ -793,18 +793,26 @@ function FromFixtures({ team }: { team: Team }) {
 function DbuTools({ team }: { team: Team }) {
   const importFixtures = useStudio((s) => s.importFixtures);
   const playFixture = useStudio((s) => s.playFixture);
-  const [open, setOpen] = useState(false);
+  // The team the import dialog was opened for; its import lands there.
+  const [openFor, setOpenFor] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const t = useTranslations("dbu.fixtures");
   const tErrors = useTranslations("dbu.errors");
 
-  async function apply(data: DbuImport, link: DbuLink) {
+  /**
+   * Applies an import to the team it was started for (`teamId`), even if another team
+   * is open by the time DBU answers. A team deleted in the meantime gets nothing.
+   */
+  async function apply(teamId: string, data: DbuImport, link: DbuLink) {
+    const teamNow = () => useStudio.getState().teams.find((x) => x.id === teamId);
+    if (!teamNow()) return;
     const fresh = toFixtures(data);
     // Only fill the crest in when the team has none: one picked by hand stays.
-    const crest = !team.crest && data.club.crest ? data.club.crest : null;
+    const crest = !teamNow()?.crest && data.club.crest ? data.club.crest : null;
     const extra = crest ? { crest, crestKind: await crestKindOf(crest) } : {};
-    const { added, updated } = importFixtures(link, fresh, extra);
-    const now = latestTeam();
+    const { added, updated } = importFixtures(teamId, link, fresh, extra);
+    const now = teamNow();
+    if (!now) return;
     const next = nextFixture(now.fixtures);
     const title =
       added || updated
@@ -822,22 +830,26 @@ function DbuTools({ team }: { team: Team }) {
       next.date === now.match.date &&
       next.opponent.trim().toLowerCase() === now.match.opponent.trim().toLowerCase();
     if (next && matchIsBlank(now)) {
-      playFixture(next.id);
+      playFixture(next.id, teamId);
       toast.success(title, { description: t("matchSet", { opponent: next.opponent }) });
     } else {
       toast.success(title, {
         action:
           next && !isCurrent
-            ? { label: t("next", { opponent: next.opponent }), onClick: () => playFixture(next.id) }
+            ? {
+                label: t("next", { opponent: next.opponent }),
+                onClick: () => playFixture(next.id, teamId),
+              }
             : undefined,
       });
     }
   }
 
   async function update(link: DbuLink) {
+    const teamId = team.id;
     setUpdating(true);
     try {
-      await apply(await getDbuImport(link), link);
+      await apply(teamId, await getDbuImport(link), link);
     } catch (e) {
       toast.error(t("updateFailed"), { description: tErrors(dbuErrorKey(e)) });
     } finally {
@@ -853,22 +865,22 @@ function DbuTools({ team }: { team: Team }) {
             <ArrowsClockwiseIcon size={14} className={clsx(updating && "animate-spin")} />
             {updating ? t("updating") : t("update")}
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => setOpen(true)} disabled={updating}>
+          <Button size="sm" variant="ghost" onClick={() => setOpenFor(team.id)} disabled={updating}>
             {t("changeTeams")}
           </Button>
         </>
       ) : (
-        <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
+        <Button size="sm" variant="ghost" onClick={() => setOpenFor(team.id)}>
           <DownloadSimpleIcon size={14} />
           {t("import")}
         </Button>
       )}
       <DbuImportDialog
-        open={open}
-        onOpenChange={setOpen}
+        open={openFor !== null}
+        onOpenChange={(o) => !o && setOpenFor(null)}
         initialQuery={team.name}
         link={team.dbu}
-        onImport={(data, link) => apply(data, link)}
+        onImport={(data, link) => apply(openFor ?? team.id, data, link)}
       />
     </div>
   );

@@ -256,12 +256,12 @@ await test("imported opponents' crests on fixtures are uploaded too", async () =
       opponentCrest: crest,
       dbuMatchId: id,
     });
-    window
-      .__ts11Studio()
-      .importFixtures({ clubId: "1274", teams: [{ teamId: "1", poolId: "2" }] }, [
-        fixture("f1", "2027-02-13"),
-        fixture("f2", "2027-03-13"),
-      ]);
+    const studio = window.__ts11Studio();
+    studio.importFixtures(
+      studio.activeTeamId,
+      { clubId: "1274", teams: [{ teamId: "1", poolId: "2" }] },
+      [fixture("f1", "2027-02-13"), fixture("f2", "2027-03-13")],
+    );
   });
   const crests = await waitFor(
     async () => {

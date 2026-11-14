@@ -247,8 +247,12 @@ function parseScore(score: string): { us: number; them: number } | null {
  * match, and the fixture's result typed in when it has one.
  */
 export function matchFromFixture(m: Match, f: Fixture): Match {
+  // DBU's match number decides when both have one: a club can meet the same opponent
+  // twice on one day (a tournament). Otherwise the date and opponent do.
   const same =
-    m.date === f.date && m.opponent.trim().toLowerCase() === f.opponent.trim().toLowerCase();
+    m.dbu && f.dbuMatchId
+      ? m.dbu.matchId === f.dbuMatchId
+      : m.date === f.date && m.opponent.trim().toLowerCase() === f.opponent.trim().toLowerCase();
   const result = parseScore(f.score);
   const fresh: Partial<Match> = same
     ? {}
@@ -283,7 +287,8 @@ export function matchFromFixture(m: Match, f: Fixture): Match {
     isHome: f.isHome,
     competition: f.competition,
     date: f.date,
-    kickoff: f.kickoff || m.kickoff,
+    // DBU leaves the time empty until it's set; another game's time would be wrong.
+    kickoff: f.kickoff || (same ? m.kickoff : ""),
     venue: f.venue ?? (same ? m.venue : ""),
   };
 }

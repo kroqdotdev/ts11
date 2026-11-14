@@ -1,3 +1,4 @@
+import "server-only";
 import type { Colors } from "@/lib/types";
 import type { KitNames } from "./parse";
 

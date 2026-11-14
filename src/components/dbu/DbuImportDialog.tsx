@@ -94,8 +94,12 @@ function ImportBody({ open, onOpenChange, initialQuery = "", link, onImport }: P
     try {
       const club = await getDbuClub(id);
       setStage({ name: "teams", club });
-      // With one competition there's nothing to choose.
-      if (club.teams.length === 1) setPicked(new Set([selectionKey(club.teams[0])]));
+      const listed = new Set(club.teams.map(selectionKey));
+      // With one competition there's nothing to choose. Otherwise keep only the ticks
+      // the club still has: a competition from last season may be gone.
+      setPicked((prev) =>
+        club.teams.length === 1 ? listed : new Set([...prev].filter((k) => listed.has(k))),
+      );
       requestAnimationFrame(() => teamsRef.current?.querySelector("input")?.focus());
     } catch (e) {
       setStage({ name: "search" });
@@ -139,6 +143,8 @@ function ImportBody({ open, onOpenChange, initialQuery = "", link, onImport }: P
     });
 
   const club = stage.name === "teams" ? stage.club : null;
+  // Only ticks the club lists count, for the button and its label.
+  const chosenCount = club ? club.teams.filter((e) => picked.has(selectionKey(e))).length : 0;
   const groups = club
     ? [...new Set(club.teams.map((t) => t.group))].map((group) => ({
         group,
@@ -161,9 +167,9 @@ function ImportBody({ open, onOpenChange, initialQuery = "", link, onImport }: P
             <Button
               variant="primary"
               onClick={() => runImport(club)}
-              disabled={importing || picked.size === 0}
+              disabled={importing || chosenCount === 0}
             >
-              {importing ? t("import.importing") : t("import.importButton", { count: picked.size })}
+              {importing ? t("import.importing") : t("import.importButton", { count: chosenCount })}
             </Button>
           </>
         ) : undefined
