@@ -1,11 +1,12 @@
 "use client";
 
 import { ArrowLeftIcon, CaretRightIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button, Dialog, TextInput } from "@/components/ui/controls";
 import { Check } from "./Check";
 import {
-  DbuError,
+  dbuErrorKey,
   getDbuClub,
   getDbuImport,
   searchDbuClubs,
@@ -18,9 +19,6 @@ import {
 
 type Stage =
   { name: "search" } | { name: "loading-club"; hit: DbuClubHit } | { name: "teams"; club: DbuClub };
-
-const message = (e: unknown) =>
-  e instanceof DbuError ? e.message : "Something went wrong. Try again in a minute.";
 
 /**
  * Finds a Danish club on DBU, lets the person tick the competitions their team plays
@@ -62,11 +60,13 @@ function ImportBody({ open, onOpenChange, initialQuery = "", link, onImport }: P
   const queryId = useId();
   const resultsRef = useRef<HTMLUListElement>(null);
   const teamsRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("dbu");
+  const message = (e: unknown) => t(`errors.${dbuErrorKey(e)}`);
 
   async function search() {
     const q = query.trim();
     if (q.length < 2) {
-      setError("Type at least two letters of the club's name.");
+      setError(t("import.tooShort"));
       return;
     }
     setSearching(true);
@@ -150,28 +150,20 @@ function ImportBody({ open, onOpenChange, initialQuery = "", link, onImport }: P
     <Dialog
       open={open}
       onOpenChange={(o) => !importing && onOpenChange(o)}
-      title="Import from DBU"
-      description={
-        club
-          ? "Tick every competition your team plays in, like the league and the cup. Fixtures, results and the opponents' crests come with them."
-          : "For clubs in Denmark. Find your club and we'll bring in its crest, colours, fixtures and results, with your opponents' crests."
-      }
+      title={t("import.title")}
+      description={club ? t("import.pickIntro") : t("import.intro")}
       footer={
         club ? (
           <>
             <Button onClick={() => onOpenChange(false)} disabled={importing}>
-              Cancel
+              {t("import.cancel")}
             </Button>
             <Button
               variant="primary"
               onClick={() => runImport(club)}
               disabled={importing || picked.size === 0}
             >
-              {importing
-                ? "Importing…"
-                : picked.size > 1
-                  ? `Import ${picked.size} competitions`
-                  : "Import fixtures"}
+              {importing ? t("import.importing") : t("import.importButton", { count: picked.size })}
             </Button>
           </>
         ) : undefined
@@ -189,20 +181,22 @@ function ImportBody({ open, onOpenChange, initialQuery = "", link, onImport }: P
           }}
         >
           <label htmlFor={queryId} className="text-[13px] font-semibold">
-            Club name
+            {t("import.clubName")}
           </label>
           <div className="flex gap-2">
             <TextInput
               id={queryId}
               autoFocus
               value={query}
-              placeholder="e.g. Torslunde-Ishøj IF"
+              placeholder={t("import.placeholder")}
               onChange={(e) => setQuery(e.target.value)}
               autoComplete="off"
             />
-            <Button type="submit" disabled={searching} aria-label="Search DBU">
+            <Button type="submit" disabled={searching} aria-label={t("import.searchLabel")}>
               <MagnifyingGlassIcon size={16} weight="bold" />
-              <span className="max-sm:hidden">{searching ? "Searching…" : "Search"}</span>
+              <span className="max-sm:hidden">
+                {searching ? t("import.searching") : t("import.search")}
+              </span>
             </Button>
           </div>
         </form>
@@ -211,11 +205,13 @@ function ImportBody({ open, onOpenChange, initialQuery = "", link, onImport }: P
       {stage.name === "search" && hits && (
         <div className="flex flex-col gap-2">
           {hits.length === 0 ? (
-            <p className="text-sm text-ink-soft">
-              No clubs on DBU match “{query.trim()}”. Try part of the name.
-            </p>
+            <p className="text-sm text-ink-soft">{t("import.noHits", { query: query.trim() })}</p>
           ) : (
-            <ul ref={resultsRef} className="flex flex-col gap-1.5" aria-label="Clubs on DBU">
+            <ul
+              ref={resultsRef}
+              className="flex flex-col gap-1.5"
+              aria-label={t("import.hitsLabel")}
+            >
               {hits.map((hit) => (
                 <li key={hit.id}>
                   <button
@@ -235,7 +231,7 @@ function ImportBody({ open, onOpenChange, initialQuery = "", link, onImport }: P
 
       {stage.name === "loading-club" && (
         <p className="text-sm text-ink-soft" role="status">
-          Looking up {stage.hit.name || "the club"}’s teams…
+          {t("import.loadingClub")}
         </p>
       )}
 
@@ -253,29 +249,27 @@ function ImportBody({ open, onOpenChange, initialQuery = "", link, onImport }: P
               }}
             >
               <ArrowLeftIcon size={14} />
-              Other club
+              {t("import.otherClub")}
             </Button>
           </div>
           {club.teams.length === 0 ? (
-            <p className="text-sm text-ink-soft">
-              DBU doesn&apos;t list any of this club&apos;s teams in a competition right now.
-            </p>
+            <p className="text-sm text-ink-soft">{t("import.noTeams")}</p>
           ) : (
             groups.map(({ group, teams }) => (
               <fieldset key={group || "teams"} className="flex flex-col gap-1.5">
                 {group && (
                   <legend className="mb-1.5 text-[13px] font-semibold text-ink">{group}</legend>
                 )}
-                {teams.map((t) => {
-                  const key = selectionKey(t);
+                {teams.map((entry) => {
+                  const key = selectionKey(entry);
                   return (
                     <Check
                       key={key}
                       checked={picked.has(key)}
                       onChange={() => toggle(key)}
                       disabled={importing}
-                      title={t.competition}
-                      detail={t.pool}
+                      title={entry.competition}
+                      detail={entry.pool}
                     />
                   );
                 })}
@@ -291,9 +285,7 @@ function ImportBody({ open, onOpenChange, initialQuery = "", link, onImport }: P
         </p>
       )}
 
-      <p className="text-xs leading-snug text-ink-soft">
-        Read from dbu.dk&apos;s public results pages. No DBU login needed.
-      </p>
+      <p className="text-xs leading-snug text-ink-soft">{t("import.source")}</p>
     </Dialog>
   );
 }

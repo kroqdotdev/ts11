@@ -1,7 +1,8 @@
 import { formatMatchDate, initials } from "@/lib/format";
+import { textFor } from "@/lib/graphicText";
 import { byMinute, firstHalfGoals, matchScore } from "@/lib/score";
 import type { Colors, Design, Goal, Team } from "@/lib/types";
-import { balance, Crest, fitText, Footer, Heading, px, textUnits } from "./parts";
+import { balance, Crest, fitText, Footer, Heading, minPx, px, textUnits } from "./parts";
 import type { Theme } from "./theme";
 
 export interface Side {
@@ -103,18 +104,20 @@ export function fitNames(
   // A side "wants" its short name when the full one would be much too small and the
   // short one is genuinely bigger. Then both sides go short, so "SWL 2-1 Brightlingsea
   // Regent Under-23s" never happens.
+  // Too small: under the ratio, or under the readable minimum whatever the ratio.
+  const low = Math.max(max * minRatio, Math.min(minPx(theme), max));
   const wantsShort = (n: { name: string; short?: string }) => {
     const short = n.short?.trim();
     if (!short || short.length >= n.name.length) return false;
     const full = best(n.name).size;
-    return full < max * minRatio && best(short).size > full;
+    return full < low && best(short).size > full;
   };
   const allShort = together && names.some(wantsShort) && names.every((n) => n.short?.trim());
   const picks = names.map((n) => {
     const full = best(n.name);
     const short = n.short?.trim();
     if (allShort && short) return best(short);
-    if (full.size < max * minRatio && short && short.length < n.name.length) {
+    if (full.size < low && short && short.length < n.name.length) {
       const s = best(short);
       if (s.size > full.size) return s;
     }
@@ -198,7 +201,7 @@ export function Fixture({ team, design, theme }: { team: Team; design: Design; t
   const col = columnBox(theme, design);
   const [home, away] = sides(team);
   const crest = (tall ? 220 : wide ? 150 : 170) * u;
-  const date = formatMatchDate(m.date);
+  const date = formatMatchDate(m.date, team.language);
   const names = fitNames(
     [home, away],
     teamRowNameWidth(col.width, crest, false),
@@ -263,7 +266,7 @@ export function Fixture({ team, design, theme }: { team: Team; design: Design; t
                 fontWeight: theme.font.heavy,
               }}
             >
-              v
+              {textFor(team).vStacked}
             </div>
             <TeamRow
               side={away}

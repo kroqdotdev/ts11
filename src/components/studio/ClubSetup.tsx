@@ -1,11 +1,13 @@
 "use client";
 
 import { AuthDialog, useAuthDialog } from "@/components/account/AuthDialog";
+import { LocaleSwitch } from "@/components/i18n/LocaleSwitch";
 import { SetupForm } from "@/components/setup/SetupForm";
 import { StadiumScene } from "@/components/setup/StadiumScene";
 import { useSetupFlow } from "@/components/setup/useSetupFlow";
 import { Wordmark } from "@/components/Wordmark";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { useSession } from "@/lib/auth-client";
 import { useStudio, useUi } from "@/lib/store";
 
@@ -20,6 +22,7 @@ export function ClubSetup({ first }: { first: boolean }) {
   const router = useRouter();
   const showAuth = useAuthDialog((s) => s.show);
   const session = useSession();
+  const t = useTranslations("setup.header");
   // Someone whose clubs are already in an account can sign in instead of setting up again.
   const offerSignIn = first && !session.isPending && !session.data?.user;
   const flow = useSetupFlow({
@@ -39,13 +42,23 @@ export function ClubSetup({ first }: { first: boolean }) {
       // Escape: a new team is cancelled; the very first setup goes back to the home page.
       onEscape={first ? () => router.push("/") : () => setSetupOpen(false)}
       screen={<SetupForm flow={flow} variant="screen" />}
-      narrowScreen={<SetupForm flow={flow} variant="screen" narrow />}
+      // Phones have no room in the header for the language switch: it sits under the
+      // first question instead.
+      narrowScreen={
+        <SetupForm
+          flow={flow}
+          variant="screen"
+          narrow
+          start={<LocaleSwitch className="-ml-2 sm:hidden" />}
+        />
+      }
       header={
         <header className="absolute inset-x-0 top-0 z-20 flex h-16 items-center justify-between gap-4 bg-[#10151c] px-4 lg:bg-transparent lg:px-6">
           <span className="rounded-[4px] bg-[#10151c]/85 px-2.5 py-1.5 text-chalk">
             <Wordmark className="text-[22px]" />
           </span>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-3">
+            <LocaleSwitch tone="chalk" className="max-sm:hidden" />
             {offerSignIn && (
               <button
                 type="button"
@@ -53,8 +66,8 @@ export function ClubSetup({ first }: { first: boolean }) {
                 className="shrink-0 rounded-[4px] px-2 py-1.5 text-sm font-medium whitespace-nowrap text-chalk underline-offset-4 hover:underline"
               >
                 {/* Phones have room for "Sign in" only; the full label stays for screen readers. */}
-                <span className="max-sm:sr-only">Already have an account? </span>
-                Sign in
+                <span className="max-sm:sr-only">{t("haveAccount")} </span>
+                {t("signIn")}
               </button>
             )}
             <button
@@ -62,7 +75,7 @@ export function ClubSetup({ first }: { first: boolean }) {
               onClick={first ? skipSetup : () => setSetupOpen(false)}
               className="lofi-press rounded-[4px] border-2 border-card-ink bg-paper px-3 py-1.5 text-sm font-medium text-ink shadow-[3px_3px_0_var(--card-ink)]"
             >
-              {first ? "Try the example club" : "Cancel"}
+              {first ? t("example") : t("cancel")}
             </button>
           </div>
           <AuthDialog />

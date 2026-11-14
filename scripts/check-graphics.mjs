@@ -6,9 +6,10 @@
  *   pnpm dev                       # in another terminal
  *   pnpm check:graphics            # everything
  *   pnpm check:graphics --look sash --kind lineup --case long --shots .check/shots
+ *   pnpm check:graphics --lang da   # only the Danish cases (long-da, …)
  *
  * Options: --base <url> (default http://localhost:3000), --case, --look, --kind,
- * --format (comma lists), --shots <dir> (screenshots of failing graphics, faults
+ * --format (comma lists), --lang en|da (cases with English or Danish graphics), --shots <dir> (screenshots of failing graphics, faults
  * outlined), --json <file>, --rules out,clipped,spill,covered,overlap,small,orphan,uneven,empty (which fail).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -32,9 +33,14 @@ const failRules = new Set(
   String(args.rules ?? "out,clipped,spill,covered,overlap,small,orphan,uneven,empty").split(","),
 );
 const LOOKS = ["block", "stripes", "hoops", "halves", "sash", "night", "clean", "pixel", "stadium"];
-const CASES = ["example", "long", "dark", "sparse"];
+// Each case once with English graphics and once with Danish ones ("-da").
+const BASE_CASES = ["example", "long", "dark", "sparse"];
+const CASES = [...BASE_CASES, ...BASE_CASES.map((c) => `${c}-da`)];
 const looks = args.look ? String(args.look).split(",") : LOOKS;
-const cases = args.case ? String(args.case).split(",") : CASES;
+const lang = args.lang ? String(args.lang) : null;
+const cases = (args.case ? String(args.case).split(",") : CASES).filter(
+  (c) => !lang || (lang === "da") === c.endsWith("-da"),
+);
 
 const executablePath =
   process.env.CHROME_PATH ??

@@ -5,6 +5,7 @@
 import { legible } from "../theme";
 import type { CSSProperties, ReactNode } from "react";
 import { displayName } from "@/lib/format";
+import { textUnits } from "../parts";
 import type { Design, Player, Team } from "@/lib/types";
 import { tokenSize, type Rect } from "../LineupPitch";
 import { placedStarters, type Placed } from "../selection";
@@ -35,6 +36,8 @@ interface Label {
   left: number;
 }
 
+type Box = { x0: number; y0: number; x1: number; y1: number };
+
 /** Packs words (split after hyphens and at spaces) into lines no wider than `room`. */
 function wrapWords(text: string, room: number, width: (t: string) => number): string[] {
   const tokens = text.split(/(?<=-)|\s+/).filter(Boolean);
@@ -55,7 +58,14 @@ function wrapWords(text: string, room: number, width: (t: string) => number): st
  * Labels go under their token, or beside or above it when that would collide
  * with a team-mate's label or run off the pitch.
  */
-function planLabels(shown: Placed[], design: Design, theme: Theme, rect: Rect, size: number) {
+function planLabels(
+  shown: Placed[],
+  design: Design,
+  theme: Theme,
+  rect: Rect,
+  size: number,
+  team: Pick<Team, "language">,
+) {
   // Heavy capitals run wider than the average glyph; estimate generously.
   const est = (t: string, s: number) => t.length * s * theme.font.glyph * 1.18;
   const floor = legible(theme, 0);
@@ -74,8 +84,8 @@ function planLabels(shown: Placed[], design: Design, theme: Theme, rect: Rect, s
   });
   // The size most names can take on one line (full or surname).
   const best = shown.map((pl, i) => {
-    const full = displayName(pl.player!, design.nameStyle);
-    const surname = displayName(pl.player!, "surname");
+    const full = displayName(pl.player!, design.nameStyle, team.language);
+    const surname = displayName(pl.player!, "surname", team.language);
     const one = (t: string) =>
       (rooms[i] * 0.92) / (Math.max(1, t.length) * theme.font.glyph * 1.08);
     return Math.max(one(full), one(surname));
@@ -85,79 +95,107 @@ function planLabels(shown: Placed[], design: Design, theme: Theme, rect: Rect, s
   // Try the natural size first; if labels can't all find a clear spot, step the
   // whole team's size down towards the floor.
   for (let S = S0; ; S = Math.max(floor, S * 0.9)) {
-    const { plans: p, clashes } = placeAt(S);
-    if (clashes === 0 || S <= floor) return p;
+    let plan = placeAt(S, false);
+    // Still crowded: place the longest names first, while they have the most room.
+    if (plan.clashes > 0) {
+      const longFirst = placeAt(S, true);
+      if (longFirst.clashes < plan.clashes) plan = longFirst;
+    }
+    if (plan.clashes === 0 || S <= floor) return plan;
   }
 
-  function placeAt(S: number) {
+  function placeAt(S: number, longFirst: boolean) {
     const out = new Map<number, Label>();
     let clashes = 0;
     // Labels on a plate carry padding either side.
     const pad = S * 0.3;
-    const boxes: { x0: number; y0: number; x1: number; y1: number }[] = [];
+    const boxes: Box[] = [];
     // Tokens are obstacles too.
     for (const pl of shown) {
       const { x, y } = pos(pl);
       boxes.push({ x0: x - size / 2, y0: y - size / 2, x1: x + size / 2, y1: y + size / 2 });
     }
     // Keepers last: their label has the fewest good spots and should yield.
+    const length = (i: number) => displayName(shown[i].player!, "surname", team.language).length;
     const order = [...shown.keys()].sort(
-      (i, j) => Number(shown[i].slot.index === 0) - Number(shown[j].slot.index === 0),
+      (i, j) =>
+        Number(shown[i].slot.index === 0) - Number(shown[j].slot.index === 0) ||
+        (longFirst ? length(j) - length(i) : 0),
     );
     for (const i of order) {
       const pl = shown[i];
       const room = rooms[i] - pad * 2;
-      const full = displayName(pl.player!, design.nameStyle);
-      const surname = displayName(pl.player!, "surname");
+      const full = displayName(pl.player!, design.nameStyle, team.language);
+      const surname = displayName(pl.player!, "surname", team.language);
       const widest = (ls: string[]) => Math.max(...ls.map((l) => est(l, S)));
       const options: string[][] = [[full], [surname], wrapWords(surname, room, (t) => est(t, S))];
-      const lines =
-        options.find((ls) => ls.length <= 3 && widest(ls) <= room) ??
-        options.reduce((x, y) => (widest(y) < widest(x) ? y : x));
-      const squeeze = Math.max(0.6, Math.min(1, room / widest(lines)));
-      const w = widest(lines) * squeeze + pad * 2;
-      const h = lines.length * S * 1.05 + S * 0.24;
+      const fits = options.find((ls) => ls.length <= 3 && widest(ls) <= room);
+      // Nothing fits the room: the narrowest form, or the surname on one line
+      // condensed, whichever finds a clear spot (a wrapped name is taller).
+      const forms = fits
+        ? [fits]
+        : [options.reduce((a, b) => (widest(b) < widest(a) ? b : a)), [surname]];
       const { x, y } = pos(pl);
-      const clampX = (cx: number) => Math.min(Math.max(cx, w / 2), rect.w - w / 2) - x;
-      const below = size * 0.56;
-      const side = size * 0.58 + w / 2;
-      const spots = [
-        { top: below, left: clampX(x) },
-        { top: -h / 2, left: side },
-        { top: -h / 2, left: -side },
-        { top: -(below + h), left: clampX(x) },
-        { top: below, left: clampX(x + w / 2) },
-        { top: below, left: clampX(x - w / 2) },
-        { top: -(below + h), left: clampX(x + w / 2) },
-        { top: -(below + h), left: clampX(x - w / 2) },
-      ];
-      const box = (sp: { top: number; left: number }) => ({
-        x0: x + sp.left - w / 2,
-        y0: y + sp.top,
-        x1: x + sp.left + w / 2,
-        y1: y + sp.top + h,
-      });
-      const overlap = (b: ReturnType<typeof box>) => {
-        const off =
-          Math.max(0, -b.x0) +
-          Math.max(0, b.x1 - rect.w) +
-          Math.max(0, -b.y0) +
-          Math.max(0, b.y1 - rect.h);
-        const hit = boxes.reduce(
-          (sum, o) =>
-            sum +
-            Math.max(0, Math.min(b.x1, o.x1) - Math.max(b.x0, o.x0)) *
-              Math.max(0, Math.min(b.y1, o.y1) - Math.max(b.y0, o.y0)),
-          0,
-        );
-        return off * 1000 + hit;
-      };
-      const scored = spots.map((sp) => ({ sp, cost: overlap(box(sp)) }));
-      const pick =
-        scored.find((c) => c.cost === 0) ?? scored.reduce((a, b) => (b.cost < a.cost ? b : a));
-      if (pick.cost > 0) clashes++;
-      boxes.push(box(pick.sp));
-      out.set(pl.slot.index, { lines, size: S, squeeze, w, h, ...pick.sp });
+      let best: { cost: number; label: Label; box: Box } | null = null;
+      for (const lines of forms) {
+        const squeeze = Math.max(0.6, Math.min(1, room / widest(lines)));
+        const w = widest(lines) * squeeze + pad * 2;
+        const h = lines.length * S * 1.05 + S * 0.24;
+        const clampX = (cx: number) => Math.min(Math.max(cx, w / 2), rect.w - w / 2) - x;
+        const below = size * 0.56;
+        const side = size * 0.58 + w / 2;
+        const spots = [
+          { top: below, left: clampX(x) },
+          { top: -h / 2, left: side },
+          { top: -h / 2, left: -side },
+          { top: -(below + h), left: clampX(x) },
+          { top: below, left: clampX(x + w / 2) },
+          { top: below, left: clampX(x - w / 2) },
+          { top: -(below + h), left: clampX(x + w / 2) },
+          { top: -(below + h), left: clampX(x - w / 2) },
+          // Crowded rows: beside the token but level with its top or bottom edge,
+          // or under it pushed clear to one side.
+          { top: -size * 0.1, left: side },
+          { top: -size * 0.1, left: -side },
+          { top: size * 0.1 - h, left: side },
+          { top: size * 0.1 - h, left: -side },
+          { top: below, left: clampX(x + w / 2 + size * 0.4) },
+          { top: below, left: clampX(x - w / 2 - size * 0.4) },
+        ];
+        const box = (sp: { top: number; left: number }): Box => ({
+          x0: x + sp.left - w / 2,
+          y0: y + sp.top,
+          x1: x + sp.left + w / 2,
+          y1: y + sp.top + h,
+        });
+        const cost = (b: Box) => {
+          const off =
+            Math.max(0, -b.x0) +
+            Math.max(0, b.x1 - rect.w) +
+            Math.max(0, -b.y0) +
+            Math.max(0, b.y1 - rect.h);
+          const hit = boxes.reduce(
+            (sum, o) =>
+              sum +
+              Math.max(0, Math.min(b.x1, o.x1) - Math.max(b.x0, o.x0)) *
+                Math.max(0, Math.min(b.y1, o.y1) - Math.max(b.y0, o.y0)),
+            0,
+          );
+          return off * 1000 + hit;
+        };
+        for (const sp of spots) {
+          const b = box(sp);
+          const c = cost(b);
+          if (!best || c < best.cost) {
+            best = { cost: c, box: b, label: { lines, size: S, squeeze, w, h, ...sp } };
+          }
+          if (c === 0) break;
+        }
+        if (best?.cost === 0) break;
+      }
+      if (best!.cost > 0) clashes++;
+      boxes.push(best!.box);
+      out.set(pl.slot.index, best!.label);
     }
     return { plans: out, clashes };
   }
@@ -203,8 +241,19 @@ export function PitchDiagram({
   skin: PitchSkin;
 }) {
   const shown = placedStarters(team).filter((p) => p.player);
-  const size = tokenSize(theme, rect, team.lineup.size) * (skin.scale ?? 0.82);
-  const labels = planLabels(shown, design, theme, rect, size);
+  // Long names that still can't all find a clear spot at the smallest label size get
+  // the room from slightly smaller tokens.
+  const base = tokenSize(theme, rect, team.lineup.size) * (skin.scale ?? 0.82);
+  let size = base;
+  let labels = planLabels(shown, design, theme, rect, size, team);
+  for (const k of [0.88, 0.76, 0.66]) {
+    if (labels.clashes === 0) break;
+    const next = planLabels(shown, design, theme, rect, base * k, team);
+    if (next.clashes < labels.clashes) {
+      labels = next;
+      size = base * k;
+    }
+  }
   return (
     <div
       style={{
@@ -218,7 +267,7 @@ export function PitchDiagram({
     >
       <PitchLines color={skin.line} width={skin.lineWidth} />
       {shown.map((pl) => {
-        const label = labels.get(pl.slot.index)!;
+        const label = labels.plans.get(pl.slot.index)!;
         const captain = design.showCaptain && team.lineup.captainId === pl.player!.id;
         return (
           <div
@@ -259,7 +308,9 @@ export function PitchDiagram({
                     label.squeeze < 0.999
                       ? {
                           transform: `scaleX(${label.squeeze})`,
-                          margin: `0 ${-((1 - label.squeeze) * (l.length * label.size * theme.font.glyph * 1.08)) / 2}px`,
+                          // Pull the box in by what the condensing saves, estimated on the
+                          // low side so the box never ends up narrower than the text.
+                          margin: `0 ${-((1 - label.squeeze) * (textUnits(l) * label.size * theme.font.glyph * 0.95)) / 2}px`,
                         }
                       : undefined
                   }

@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
+import { getPathname } from "@/i18n/navigation";
 import { START_EVENT } from "@/lib/events";
 import { useHydrated, useStudio } from "@/lib/store";
 
@@ -14,21 +16,24 @@ export function buttonName(team: { name: string; shortName: string }): string {
  * up and starts. A returning club is offered its own studio instead.
  */
 export function StartLink({ children, className = "" }: { children: string; className?: string }) {
+  const t = useTranslations("landing");
+  const locale = useLocale();
+  const href = getPathname({ href: "/studio", locale });
   const hydrated = useHydrated();
   const name = useStudio((s) => {
-    const team = s.onboarded ? s.teams.find((t) => t.id === s.activeTeamId) : undefined;
+    const team = s.onboarded ? s.teams.find((x) => x.id === s.activeTeamId) : undefined;
     return team ? buttonName(team) : null;
   });
   return (
     <a
-      href="/studio"
+      href={href}
       onClick={(e) => {
         e.preventDefault();
         window.dispatchEvent(new Event(START_EVENT));
       }}
       className={className}
     >
-      <span className="truncate">{hydrated && name ? `Open ${name}` : children}</span>
+      <span className="truncate">{hydrated && name ? t("openClub", { name }) : children}</span>
     </a>
   );
 }

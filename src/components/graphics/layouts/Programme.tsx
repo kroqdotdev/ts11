@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { textFor } from "@/lib/graphicText";
 import { alpha, contrast, readableOn } from "@/lib/color";
 import { formatMatchDate } from "@/lib/format";
 import type { GraphicKind } from "@/lib/types";
@@ -232,7 +233,7 @@ function Cover({
               whiteSpace: "nowrap",
             }}
           >
-            Official matchday programme
+            {textFor(team).programme}
           </div>
         </div>
         <Roundel
@@ -242,7 +243,7 @@ function Cover({
           border={`${4 * u}px solid ${k.ink}`}
           style={{ transform: "rotate(-8deg)", fontWeight: theme.font.heavy }}
         >
-          <div style={{ fontSize: small }}>No.</div>
+          <div style={{ fontSize: small }}>{textFor(team).issue}</div>
           <div
             style={{
               fontSize: Math.min(roundel * 0.38, roundel * 0.9 - small * 2.1),
@@ -251,7 +252,7 @@ function Cover({
           >
             {issue}
           </div>
-          <div style={{ fontSize: small }}>£2</div>
+          <div style={{ fontSize: small }}>{textFor(team).price}</div>
         </Roundel>
       </div>
       <div
@@ -414,7 +415,7 @@ export function ProgrammeFixture(props: LayoutProps) {
                         margin: `${c * 0.02}px 0 ${c * 0.1}px ${c * 0.32}px`,
                       }}
                     >
-                      v
+                      {textFor(team).vStacked}
                     </div>
                   )}
                   <div style={{ display: "flex", alignItems: "center", gap: 26 * u }}>
@@ -450,7 +451,7 @@ export function ProgrammeFixture(props: LayoutProps) {
                 }}
               >
                 <div style={{ fontSize: Math.max(minText(theme), 30 * u), color: k.soft }}>
-                  {f.kickoff ? "Kick-off" : ""}
+                  {f.kickoff ? textFor(team).kickoff : ""}
                 </div>
                 <div
                   style={{
@@ -493,7 +494,7 @@ export function ProgrammeLineup(props: LayoutProps) {
         const benchText = bench.length ? bench.join(", ") : "";
         const benchSize = Math.max(minText(theme), (tall ? 28 : 24) * u);
         const benchH = benchText
-          ? paragraphHeight(`Subs ${benchText}`, box.w, benchSize, theme) + 14 * u
+          ? paragraphHeight(`${textFor(team).subs} ${benchText}`, box.w, benchSize, theme) + 14 * u
           : 0;
         const top = sub ? subSize * 1.5 : 0;
         const listH = box.h - top - benchH;
@@ -595,7 +596,7 @@ export function ProgrammeLineup(props: LayoutProps) {
                           color: k.accent,
                         }}
                       >
-                        (C)
+                        ({textFor(team).captain})
                       </span>
                     )}
                   </div>
@@ -614,7 +615,9 @@ export function ProgrammeLineup(props: LayoutProps) {
                   color: k.soft,
                 }}
               >
-                <span style={{ color: k.accent, fontWeight: theme.font.heavy }}>Subs </span>
+                <span style={{ color: k.accent, fontWeight: theme.font.heavy }}>
+                  {textFor(team).subs}{" "}
+                </span>
                 {benchText}
               </div>
             )}
@@ -825,7 +828,7 @@ export function ProgrammeSubs(props: LayoutProps) {
   const { u, tall } = theme;
   const rows = subRows(team, design);
   return (
-    <Cover {...props} headline={subsHeadline(design, rows.length)}>
+    <Cover {...props} headline={subsHeadline(design, team, rows.length)}>
       {(box) => {
         const rowH = Math.min(box.h / Math.max(rows.length, 1), (tall ? 360 : 290) * u);
         const chip = Math.min(rowH * 0.62, 150 * u);
@@ -1113,7 +1116,7 @@ export function ProgrammeFixtures(props: LayoutProps) {
         return (
           <div data-check-list="fixtures" style={{ display: "flex", flexDirection: "column" }}>
             {rows.map((f, i) => {
-              const [weekday, day, month] = formatMatchDate(f.date).split(" ");
+              const [weekday, day, month] = formatMatchDate(f.date, team.language).split(" ");
               const right = f.score.trim() || f.kickoff;
               const nf = { lines: list.rows[i], size: list.size };
               // The opponent is the biggest thing in the row; the time sits under it in size.
@@ -1169,7 +1172,7 @@ export function ProgrammeFixtures(props: LayoutProps) {
                       fontWeight: theme.font.heavy,
                     }}
                   >
-                    {f.isHome ? "H" : "A"}
+                    {f.isHome ? textFor(team).homeLetter : textFor(team).awayLetter}
                   </div>
                   <div
                     style={{ width: oppW, display: "flex", flexDirection: "column", gap: 4 * u }}

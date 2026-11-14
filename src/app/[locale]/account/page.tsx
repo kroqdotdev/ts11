@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Suspense } from "react";
 import { AccountPage } from "@/components/account/AccountPage";
+import { pageLocale, pageMetadata } from "@/i18n/page";
 import { auth } from "@/server/auth";
 
-export const metadata: Metadata = {
-  title: "Storage and account",
-  description: "Your saved clubs, uploaded images and account settings.",
-  robots: { index: false },
-};
+export function generateMetadata({ params }: PageProps<"/[locale]/account">): Promise<Metadata> {
+  return pageMetadata(params, "account", "/account", { robots: { index: false } });
+}
 
 /** Checks the session on the server, so the right panel is in the first HTML. */
 async function WithSession() {
@@ -16,7 +15,8 @@ async function WithSession() {
   return <AccountPage signedIn={!!session?.user} />;
 }
 
-export default function Page() {
+export default async function Page({ params }: PageProps<"/[locale]/account">) {
+  await pageLocale(params);
   return (
     <Suspense fallback={<AccountPage />}>
       <WithSession />

@@ -26,8 +26,12 @@ await test("a full account blocks the upload and says so in the studio", async (
   });
   await waitFor(async () => (await syncStatus(p)) === "blocked", { label: "blocked" });
   const detail = await p.evaluate(() => window.__ts11SyncStatus().detail);
-  assert(/storage is full/i.test(detail), `detail: ${detail}`);
-  await p.getByText("Not saved").first().waitFor({ timeout: 5000 });
+  assert(detail?.reason === "quota", `detail: ${JSON.stringify(detail)}`);
+  await p.getByText("Not saved").first().click();
+  await p
+    .getByText(/storage is full/i)
+    .first()
+    .waitFor({ timeout: 5000 });
   // Nothing was lost: the crest is still there in this browser.
   const crest = await p.evaluate(() => window.__ts11Studio().teams[0].crest);
   assert(crest?.startsWith("data:image/"), "the local crest should be kept");

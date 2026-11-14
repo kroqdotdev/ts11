@@ -15,6 +15,7 @@ import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { CaretUpDownIcon, XIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   forwardRef,
   useId,
@@ -286,7 +287,7 @@ export function SliderField({
   min = 0,
   max = 1,
   step = 0.01,
-  format = (v: number) => `${Math.round(v * 100)}%`,
+  format,
 }: {
   label: string;
   value: number;
@@ -294,8 +295,13 @@ export function SliderField({
   min?: number;
   max?: number;
   step?: number;
+  /** How the value reads beside the label; a percentage by default. */
   format?: (v: number) => string;
 }) {
+  const number = useFormatter().number;
+  const shown = format
+    ? format(value)
+    : number(Math.round(value * 100) / 100, { style: "percent" });
   return (
     <BaseSlider.Root
       value={value}
@@ -307,7 +313,7 @@ export function SliderField({
     >
       <div className="flex items-center justify-between text-[13px]">
         <BaseSlider.Label className="font-semibold text-ink">{label}</BaseSlider.Label>
-        <span className="text-ink-soft tabular-nums">{format(value)}</span>
+        <span className="text-ink-soft tabular-nums">{shown}</span>
       </div>
       <BaseSlider.Control className="flex h-6 w-full touch-none items-center select-none">
         <BaseSlider.Track className="h-2 w-full rounded-[1px] border border-ink/30 bg-well">
@@ -334,6 +340,7 @@ export function Dialog({
   children?: ReactNode;
   footer?: ReactNode;
 }) {
+  const t = useTranslations("ui");
   return (
     <BaseDialog.Root open={open} onOpenChange={onOpenChange}>
       <BaseDialog.Portal>
@@ -346,7 +353,7 @@ export function Dialog({
               {title}
             </BaseDialog.Title>
             <BaseDialog.Close
-              aria-label="Close"
+              aria-label={t("close")}
               className="grid size-9 place-items-center rounded-[3px] text-chalk/80 hover:bg-chalk/10 hover:text-chalk"
             >
               <XIcon size={18} weight="bold" />

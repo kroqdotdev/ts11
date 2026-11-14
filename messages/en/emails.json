@@ -1,0 +1,17 @@
+{
+  "fallback": "If the button doesn't work, paste this link into your browser:",
+  "verify": {
+    "subject": "Confirm your {app} email",
+    "heading": "Confirm your email",
+    "body": "Confirm this address and your clubs save to your account, so they appear on every device you sign in on.",
+    "button": "Confirm email",
+    "footer": "This link works for 24 hours. If you didn't sign up, ignore this email and no account is kept."
+  },
+  "reset": {
+    "subject": "Reset your {app} password",
+    "heading": "Set a new password",
+    "body": "Someone asked to reset the password for your account. If it was you, choose a new one with the button below.",
+    "button": "Choose a new password",
+    "footer": "This link works for one hour. If you didn't ask for it, ignore this email and your password stays the same."
+  }
+}

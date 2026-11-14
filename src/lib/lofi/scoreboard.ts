@@ -1,4 +1,5 @@
 import { matchScore } from "@/lib/score";
+import { graphicsLanguage } from "@/lib/language";
 import type { Team } from "@/lib/types";
 import { toBoardText } from "./font";
 
@@ -20,16 +21,18 @@ function code(name: string, short: string): string {
  * The scoreboard's top line for a club. Home side on the left, as in the ground.
  * - `live`: the score once there are goals, from the same count every graphic uses.
  * - Otherwise "HOME V AWAY" before kick-off, or the kick-off time when there's no opponent yet.
+ * In the club's own language: Danish boards read "MIF - KBK" and "KL 15.00".
  */
 export function scoreboardLine(team: Team, { live = true }: { live?: boolean } = {}): string {
   const m = team.match;
-  const us = code(team.name, team.shortName) || "HOME";
+  const da = graphicsLanguage(team) === "da";
+  const us = code(team.name, team.shortName) || (da ? "HJEMME" : "HOME");
   const them = code(m.opponent, m.opponentShort);
-  if (!them) return m.kickoff ? `${us} KO ${toBoardText(m.kickoff)}` : us;
+  if (!them) return m.kickoff ? `${us} ${da ? "KL" : "KO"} ${toBoardText(m.kickoff)}` : us;
   const score = matchScore(m);
   const started = m.goals.length > 0 || (!m.autoScore && score.us + score.them > 0);
   const [home, away] = m.isHome ? [us, them] : [them, us];
-  if (!live || !started) return `${home} V ${away}`;
+  if (!live || !started) return `${home} ${da ? "-" : "V"} ${away}`;
   const [hs, as] = m.isHome ? [score.us, score.them] : [score.them, score.us];
   return `${home} ${hs}-${as} ${away}`;
 }

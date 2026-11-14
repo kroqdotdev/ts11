@@ -4,6 +4,7 @@
  * windows left open, the same low-fi UI the app itself is built from.
  */
 import type { Team } from "@/lib/types";
+import { subsHeadline, textFor } from "@/lib/graphicText";
 import type { CSSProperties, ReactNode } from "react";
 import { COAL, contrast, readableOn, shade } from "@/lib/color";
 import { displayName, formatMatchDate } from "@/lib/format";
@@ -65,15 +66,17 @@ export function skin(theme: Theme): Skin {
   return { paper: PAPER, ink: COAL, bar, barInk: readableOn(bar), accent, soft: "#5b5a55" };
 }
 
-/** A window file name made from a headline: "Full time" → "full_time.txt". */
-export function fileName(text: string, ext: string) {
+/**
+ * A window file name made from a headline: "Full time" → "full_time.txt". Danish
+ * letters stay ("Mål" → "mål.exe"); other accents are dropped.
+ */
+export function fileName(text: string, ext: string, team: Pick<Team, "language">) {
   const base = text
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/[^æøå]/g, (c) => c.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))
+    .replace(/[^a-z0-9æøå]+/g, "_")
     .replace(/^_|_$/g, "");
-  return `${base || "untitled"}.${ext}`;
+  return `${base || textFor(team).files.untitled}.${ext}`;
 }
 
 function Win({
@@ -323,7 +326,7 @@ export function WindowFixture({ team, design, theme }: LayoutProps) {
   const crest = crest0 * k;
 
   const head = (
-    <Win title={fileName(design.headlines.fixture, "exe")} theme={theme} s={s}>
+    <Win title={fileName(design.headlines.fixture, "exe", team)} theme={theme} s={s}>
       <Heading
         text={design.headlines.fixture}
         width={(split ? a.width * 0.48 : a.width) - 60 * u}
@@ -353,7 +356,7 @@ export function WindowFixture({ team, design, theme }: LayoutProps) {
   );
   const versus = (
     <Win
-      title={f.versus ? "versus.txt" : "club.txt"}
+      title={f.versus ? textFor(team).files.versus : textFor(team).files.club}
       theme={theme}
       s={s}
       style={{ width: versusW, alignSelf: split ? undefined : "flex-end" }}
@@ -377,7 +380,7 @@ export function WindowFixture({ team, design, theme }: LayoutProps) {
               paddingLeft: crest * 0.36,
             }}
           >
-            v
+            {textFor(team).vStacked}
           </div>
           <TeamLine
             {...f.away}
@@ -393,7 +396,7 @@ export function WindowFixture({ team, design, theme }: LayoutProps) {
   );
   const kickoff = (f.kickoff || f.date) && (
     <Win
-      title="kickoff.ics"
+      title={textFor(team).files.kickoff}
       theme={theme}
       s={s}
       style={{ width: split ? undefined : a.width * 0.78 }}
@@ -539,7 +542,7 @@ export function WindowResult({
 
   const board = (
     <Win
-      title={fileName(headline, "txt")}
+      title={fileName(headline, "txt", team)}
       theme={theme}
       s={s}
       style={{ width: mainW }}
@@ -621,7 +624,7 @@ export function WindowResult({
   const log =
     lines.length && !inline ? (
       <Win
-        title="scorers.log"
+        title={textFor(team).files.scorers}
         theme={theme}
         s={s}
         style={{
@@ -658,7 +661,7 @@ export function WindowResult({
               <span
                 style={{ fontWeight: theme.font.heavy, color: l.us ? s.ink : s.soft, minWidth: 0 }}
               >
-                {logText[i]?.text || "Goal"}
+                {logText[i]?.text || textFor(team).goal}
               </span>
             </div>
           ))}
@@ -720,7 +723,7 @@ export function WindowGoal({ team, design, theme }: LayoutProps) {
         }}
       >
         <Win
-          title={fileName(design.headlines.goal, "exe")}
+          title={fileName(design.headlines.goal, "exe", team)}
           theme={theme}
           s={s}
           style={{ width: mainW }}
@@ -773,7 +776,7 @@ export function WindowGoal({ team, design, theme }: LayoutProps) {
         </Win>
         {score && (
           <Win
-            title="score.txt"
+            title={textFor(team).files.score}
             theme={theme}
             s={s}
             style={{
@@ -795,7 +798,7 @@ export function WindowGoal({ team, design, theme }: LayoutProps) {
         )}
         {log.length > 0 && (
           <Win
-            title="scorers.log"
+            title={textFor(team).files.scorers}
             theme={theme}
             s={s}
             style={{ width: mainW * 0.78 }}
@@ -877,7 +880,7 @@ export function WindowLineup({ team, design, theme }: LayoutProps) {
 
   const list = (
     <Win
-      title={fileName(design.headlines.lineup, "txt")}
+      title={fileName(design.headlines.lineup, "txt", team)}
       theme={theme}
       s={s}
       style={{ width: listW }}
@@ -926,7 +929,7 @@ export function WindowLineup({ team, design, theme }: LayoutProps) {
                         padding: `${2 * u}px ${8 * u}px`,
                       }}
                     >
-                      C
+                      {textFor(team).captain}
                     </span>
                   )}
                 </div>
@@ -971,7 +974,7 @@ export function WindowLineup({ team, design, theme }: LayoutProps) {
 
   const subs = bench.length ? (
     <Win
-      title="subs.txt"
+      title={textFor(team).files.bench}
       theme={theme}
       s={s}
       style={{
@@ -1177,7 +1180,7 @@ export function WindowPitch({ team, design, theme }: LayoutProps) {
                 justifyContent: "center",
               }}
             >
-              C
+              {textFor(team).captain}
             </span>
           )}
         </div>
@@ -1226,7 +1229,7 @@ export function WindowPitch({ team, design, theme }: LayoutProps) {
   );
   const subs = bench.length ? (
     <div style={{ fontSize: legible(theme, 24 * u), lineHeight: 1.35, color: s.ink }}>
-      <b style={{ color: s.accent }}>subs.txt </b>
+      <b style={{ color: s.accent }}>{textFor(team).files.bench} </b>
       {bench.join(", ")}
     </div>
   ) : null;
@@ -1234,7 +1237,7 @@ export function WindowPitch({ team, design, theme }: LayoutProps) {
   return (
     <>
       <Win
-        title={fileName(design.headlines.pitch, "png")}
+        title={fileName(design.headlines.pitch, "png", team)}
         theme={theme}
         s={s}
         style={{ position: "absolute", ...g.win }}
@@ -1288,10 +1291,7 @@ export function WindowSubs({ team, design, theme }: LayoutProps) {
   const split = wide && !design.featureImage;
   const byId = new Map(team.players.map((p) => [p.id, p]));
   const subs = team.match.subs.slice(0, 5);
-  const headline =
-    subs.length === 1 && design.headlines.subs === "Substitutions"
-      ? "Substitution"
-      : design.headlines.subs;
+  const headline = subsHeadline(design, team, subs.length);
   const listW = split ? a.width * 0.56 : a.width;
   const avail = h - pad * 2 - 30 * u - footH(theme, design) - (split ? 0 : 300 * u) - 120 * u;
   const rowH = Math.min((theme.tall ? 300 : 260) * u, avail / Math.max(subs.length, 1));
@@ -1300,7 +1300,7 @@ export function WindowSubs({ team, design, theme }: LayoutProps) {
     .flatMap((x) => [x.onId, x.offId])
     .map((id) => {
       const p = id ? byId.get(id) : undefined;
-      return p ? `${p.number} ${displayName(p, design.nameStyle)}` : "";
+      return p ? `${p.number} ${displayName(p, design.nameStyle, team.language)}` : "";
     });
   const longest = names.reduce((x, y) => (y.length > x.length ? y : x), "");
   const nameSize = Math.min(
@@ -1309,7 +1309,7 @@ export function WindowSubs({ team, design, theme }: LayoutProps) {
   );
 
   const head = (
-    <Win title={fileName(headline, "exe")} theme={theme} s={s} style={{ flexShrink: 0 }}>
+    <Win title={fileName(headline, "exe", team)} theme={theme} s={s} style={{ flexShrink: 0 }}>
       <Heading
         text={headline}
         width={(split ? a.width * 0.4 : a.width) - 60 * u}
@@ -1333,7 +1333,7 @@ export function WindowSubs({ team, design, theme }: LayoutProps) {
   );
   const list = subs.length ? (
     <Win
-      title="changes.log"
+      title={textFor(team).files.changes}
       theme={theme}
       s={s}
       style={{ width: listW, alignSelf: split ? undefined : "flex-end" }}
@@ -1361,7 +1361,7 @@ export function WindowSubs({ team, design, theme }: LayoutProps) {
                   {p.number}
                 </span>
               )}
-              <span>{p ? displayName(p, design.nameStyle) : ""}</span>
+              <span>{p ? displayName(p, design.nameStyle, team.language) : ""}</span>
             </div>
           );
         };
@@ -1449,7 +1449,7 @@ export function WindowMotm({ team, design, theme }: LayoutProps) {
 
   const award = (
     <Win
-      title={fileName(design.headlines.motm, "exe")}
+      title={fileName(design.headlines.motm, "exe", team)}
       theme={theme}
       s={s}
       style={{ width: mainW }}
@@ -1533,7 +1533,7 @@ export function WindowMotm({ team, design, theme }: LayoutProps) {
   const memo =
     note || line ? (
       <Win
-        title="note.txt"
+        title={textFor(team).files.note}
         theme={theme}
         s={s}
         style={{
@@ -1611,7 +1611,7 @@ export function WindowFixtures({ team, design, theme }: LayoutProps) {
   const type = planFixtureRows(rows, oppW, rowH, theme);
 
   const head = (
-    <Win title="fixtures.ics" theme={theme} s={s} style={{ flexShrink: 0 }}>
+    <Win title={textFor(team).files.fixtures} theme={theme} s={s} style={{ flexShrink: 0 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 20 * u }}>
         <Crest
           src={team.crest}
@@ -1633,14 +1633,14 @@ export function WindowFixtures({ team, design, theme }: LayoutProps) {
   );
   const list = rows.length ? (
     <Win
-      title="calendar.exe"
+      title={textFor(team).files.calendar}
       theme={theme}
       s={s}
       style={{ width: listW, alignSelf: split ? undefined : "flex-end" }}
       body={{ gap: 0, padding: `${6 * u}px ${24 * u}px` }}
     >
       {rows.map((f, i) => {
-        const [, day, month] = formatMatchDate(f.date).split(" ");
+        const [, day, month] = formatMatchDate(f.date, team.language).split(" ");
         const right = f.score.trim() || f.kickoff;
         return (
           <div
@@ -1700,7 +1700,7 @@ export function WindowFixtures({ team, design, theme }: LayoutProps) {
                 flexShrink: 0,
               }}
             >
-              {f.isHome ? "H" : "A"}
+              {f.isHome ? textFor(team).homeLetter : textFor(team).awayLetter}
             </span>
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
               <span

@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { textFor } from "@/lib/graphicText";
 import { alpha, COAL, contrast, readableOn, SNOW, tonal } from "@/lib/color";
 import { formatMatchDate } from "@/lib/format";
 import { fixtureRows } from "../selection";
@@ -692,7 +693,7 @@ export function SplitLineup(props: LayoutProps) {
       {(box, k) => {
         const benchSize = Math.max(minText(theme), (tall ? 28 : 24) * u);
         const benchH = bench
-          ? paragraphHeight(`Subs ${bench}`, box.w, benchSize, theme) + 16 * u
+          ? paragraphHeight(`${textFor(team).subs} ${bench}`, box.w, benchSize, theme) + 16 * u
           : 0;
         const listH = box.h - benchH;
         const gap = 28 * u;
@@ -769,7 +770,7 @@ export function SplitLineup(props: LayoutProps) {
                         color: k.accent,
                       }}
                     >
-                      (C)
+                      ({textFor(team).captain})
                     </span>
                   )}
                 </div>
@@ -785,7 +786,9 @@ export function SplitLineup(props: LayoutProps) {
                   color: k.soft,
                 }}
               >
-                <span style={{ color: k.accent, fontWeight: theme.font.heavy }}>Subs </span>
+                <span style={{ color: k.accent, fontWeight: theme.font.heavy }}>
+                  {textFor(team).subs}{" "}
+                </span>
                 {bench}
               </div>
             )}
@@ -803,7 +806,7 @@ export function SplitSubs(props: LayoutProps) {
   return (
     <Duo
       {...props}
-      headline={subsHeadline(design, rows.length)}
+      headline={subsHeadline(design, team, rows.length)}
       sub={versusLine(team)}
       share={0.38}
     >
@@ -956,7 +959,10 @@ export function SplitFixtures(props: LayoutProps) {
           <div data-check-list="fixtures" style={{ display: "flex", flexDirection: "column" }}>
             {rows.map((f, i) => {
               const right = f.score.trim() || f.kickoff;
-              const meta = [formatMatchDate(f.date), f.isHome ? "Home" : "Away"]
+              const meta = [
+                formatMatchDate(f.date, team.language),
+                f.isHome ? textFor(team).home : textFor(team).away,
+              ]
                 .filter(Boolean)
                 .join(" · ");
               const nf = { lines: list.rows[i], size: list.size };

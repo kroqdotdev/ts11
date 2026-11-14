@@ -1,6 +1,7 @@
 "use client";
 
 import { WarningIcon } from "@phosphor-icons/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Button, Dialog } from "@/components/ui/controls";
 import { useSyncState } from "@/lib/sync/state";
@@ -16,6 +17,7 @@ export function MergeDialog() {
   const [confirming, setConfirming] = useState(false);
   const goBack = useRef<HTMLButtonElement>(null);
   const open = !!merge && !!resolve;
+  const t = useTranslations("sync.merge");
 
   useEffect(() => {
     if (confirming) goBack.current?.focus();
@@ -24,7 +26,7 @@ export function MergeDialog() {
   if (!merge || !resolve) return null;
 
   const n = merge.localNames.length;
-  const one = n === 1;
+  const name = (club: string) => club || t("unnamedClub");
   const choose = (keepLocal: boolean) => {
     setConfirming(false);
     resolve(keepLocal);
@@ -35,27 +37,23 @@ export function MergeDialog() {
       open={open}
       // Closing keeps both: nothing is removed without a deliberate choice.
       onOpenChange={(o) => !o && choose(true)}
-      title="Add this browser's clubs?"
-      description={
-        one
-          ? "This browser has a club that isn't in your account yet."
-          : `This browser has ${n} clubs that aren't in your account yet.`
-      }
+      title={t("title")}
+      description={t("description", { count: n })}
       footer={
         confirming ? (
           <>
             <Button ref={goBack} onClick={() => setConfirming(false)}>
-              Go back
+              {t("goBack")}
             </Button>
             <Button variant="destructive" onClick={() => choose(false)}>
-              Remove from this browser
+              {t("remove")}
             </Button>
           </>
         ) : (
           <>
-            <Button onClick={() => setConfirming(true)}>Use only my account</Button>
+            <Button onClick={() => setConfirming(true)}>{t("useAccount")}</Button>
             <Button variant="primary" onClick={() => choose(true)}>
-              Add to my account
+              {t("add")}
             </Button>
           </>
         )
@@ -63,19 +61,19 @@ export function MergeDialog() {
     >
       <dl className="flex flex-col gap-4 text-sm">
         <div className="flex flex-col gap-1">
-          <dt className="font-semibold text-ink">In this browser</dt>
-          {merge.localNames.map((name, i) => (
+          <dt className="font-semibold text-ink">{t("inBrowser")}</dt>
+          {merge.localNames.map((club, i) => (
             <dd key={i} className="text-ink-soft">
-              {name}
+              {name(club)}
             </dd>
           ))}
         </div>
         <div className="flex flex-col gap-1">
-          <dt className="font-semibold text-ink">In your account</dt>
-          {merge.accountNames.length === 0 && <dd className="text-ink-soft">No clubs yet</dd>}
-          {merge.accountNames.map((name, i) => (
+          <dt className="font-semibold text-ink">{t("inAccount")}</dt>
+          {merge.accountNames.length === 0 && <dd className="text-ink-soft">{t("noClubs")}</dd>}
+          {merge.accountNames.map((club, i) => (
             <dd key={i} className="text-ink-soft">
-              {name}
+              {name(club)}
             </dd>
           ))}
         </div>
@@ -91,12 +89,7 @@ export function MergeDialog() {
             aria-hidden
             className="mt-0.5 shrink-0 text-danger"
           />
-          <span>
-            {one
-              ? "That club is removed from this browser and isn't saved anywhere."
-              : "Those clubs are removed from this browser and aren't saved anywhere."}{" "}
-            Download a backup from the team menu first if you might want {one ? "it" : "them"}.
-          </span>
+          <span>{t("warning", { count: n })}</span>
         </p>
       )}
     </Dialog>

@@ -11,6 +11,11 @@ export function json(body: unknown, status = 200, headers?: HeadersInit) {
   });
 }
 
+/**
+ * An error response. `code` is stable: the pages word it in the reader's language
+ * (see src/components/account and src/lib/sync). `message` is plain English for
+ * anything else that calls the API.
+ */
 export function problem(status: number, code: string, message: string, extra?: object) {
   return json({ error: code, message, ...extra }, status);
 }

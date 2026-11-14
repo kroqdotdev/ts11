@@ -10,6 +10,7 @@ import {
   XIcon,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { useLocale, useTranslations } from "next-intl";
 import { Fragment, useId, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { DbuImportDialog } from "@/components/dbu/DbuImportDialog";
@@ -27,7 +28,7 @@ import {
 import { ColorField, ImageField } from "@/components/ui/media";
 import { crestKindOf } from "@/lib/crest";
 import {
-  DbuError,
+  dbuErrorKey,
   getDbuImport,
   matchIsBlank,
   nextFixture,
@@ -46,7 +47,7 @@ import {
 } from "@/lib/score";
 import { useActiveTeam, useStudio } from "@/lib/store";
 import { focusWhenReady } from "./fixIssue";
-import type { DbuLink, Fixture, Goal, GraphicKind, Player, Team } from "@/lib/types";
+import type { DbuLink, Fixture, Goal, GraphicKind, Language, Player, Team } from "@/lib/types";
 
 function Score({
   label,
@@ -62,13 +63,14 @@ function Score({
 }) {
   const auto = useId();
   const id = inputId ?? auto;
+  const t = useTranslations("studio.match");
   return (
     <Field label={label} htmlFor={id}>
       <div className="flex h-10 items-center rounded-md border border-rule bg-paper">
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`Lower ${label}`}
+          aria-label={t("lower", { label })}
           onClick={() => onChange(Math.max(0, value - 1))}
         >
           <MinusIcon size={14} />
@@ -83,7 +85,7 @@ function Score({
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`Raise ${label}`}
+          aria-label={t("raise", { label })}
           onClick={() => onChange(Math.min(99, value + 1))}
         >
           <PlusIcon size={14} />
@@ -99,6 +101,7 @@ function GoalRow({ goal, listId, spotlit }: { goal: Goal; listId: string; spotli
   const removeGoal = useStudio((s) => s.removeGoal);
   const updateMatch = useStudio((s) => s.updateMatch);
   const nameStyle = useStudio((s) => s.design.nameStyle);
+  const t = useTranslations("studio.match");
   const ours = goal.side === "us";
   const linked =
     ours && goal.playerId ? team.players.find((p) => p.id === goal.playerId) : undefined;
@@ -106,7 +109,9 @@ function GoalRow({ goal, listId, spotlit }: { goal: Goal; listId: string; spotli
   const match = ours && !linked ? scorerOf(team, goal) : undefined;
   const printed = linked ? displayName(linked, nameStyle) : "";
   const label =
-    printed || goal.name.trim() || (goal.minute ? `the ${goal.minute}′ goal` : "this goal");
+    printed ||
+    goal.name.trim() ||
+    (goal.minute ? t("goalAt", { minute: goal.minute }) : t("thisGoal"));
 
   const link = (p: Player) => updateGoal(goal.id, { playerId: p.id, name: p.name });
   /** On Enter or leaving the field, a name that points at one squad player links to them. */
@@ -123,8 +128,8 @@ function GoalRow({ goal, listId, spotlit }: { goal: Goal; listId: string; spotli
           variant="ghost"
           size="icon"
           aria-pressed={spotlit}
-          aria-label={`Use ${label} on the goal graphic`}
-          title="Use on the goal graphic"
+          aria-label={t("useOnGoal", { label })}
+          title={t("useOnGoalTitle")}
           onClick={() => updateMatch({ spotlightGoalId: goal.id })}
           className={clsx(spotlit && "bg-card text-card-ink hover:bg-card")}
         >
@@ -138,15 +143,15 @@ function GoalRow({ goal, listId, spotlit }: { goal: Goal; listId: string; spotli
             className="flex h-10 min-w-0 items-center gap-2 rounded-[3px] border-2 border-ink bg-paper pr-1 pl-2 outline-none"
           >
             <span className="shrink-0 rounded-[2px] bg-ink px-1.5 py-0.5 text-[11px] font-semibold text-paper tabular-nums">
-              {linked.number ? `#${linked.number}` : "Squad"}
+              {linked.number ? `#${linked.number}` : t("squad")}
             </span>
             <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
               {printed}
             </span>
             <button
               type="button"
-              aria-label={`Change scorer (now ${printed})`}
-              title="Pick someone else"
+              aria-label={t("changeScorer", { name: printed })}
+              title={t("pickElse")}
               onClick={() => {
                 updateGoal(goal.id, { playerId: null, name: "" });
                 focusWhenReady(FIELD.scorer(goal.id));
@@ -159,9 +164,9 @@ function GoalRow({ goal, listId, spotlit }: { goal: Goal; listId: string; spotli
         ) : (
           <TextInput
             id={FIELD.scorer(goal.id)}
-            aria-label="Scorer"
+            aria-label={t("scorer")}
             aria-describedby={match ? `${FIELD.scorer(goal.id)}-as` : undefined}
-            placeholder={ours ? "Scorer (pick or type)" : "Scorer"}
+            placeholder={ours ? t("scorerPick") : t("scorer")}
             list={ours ? listId : undefined}
             autoComplete="off"
             value={goal.name}
@@ -181,8 +186,8 @@ function GoalRow({ goal, listId, spotlit }: { goal: Goal; listId: string; spotli
           />
         )}
         <TextInput
-          aria-label="Minute"
-          placeholder="Min"
+          aria-label={t("minute")}
+          placeholder={t("min")}
           inputMode="numeric"
           value={goal.minute}
           onChange={(e) => updateGoal(goal.id, { minute: e.target.value.replace(/[^\d+]/g, "") })}
@@ -191,7 +196,7 @@ function GoalRow({ goal, listId, spotlit }: { goal: Goal; listId: string; spotli
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`Remove ${label}`}
+          aria-label={t("remove", { label })}
           onClick={() => removeGoal(goal.id)}
         >
           <TrashIcon size={16} />
@@ -199,16 +204,18 @@ function GoalRow({ goal, listId, spotlit }: { goal: Goal; listId: string; spotli
       </div>
       {match && (
         <p id={`${FIELD.scorer(goal.id)}-as`} className="pl-11 text-xs text-ink-soft">
-          Means{" "}
-          <button
-            type="button"
-            onClick={() => link(match)}
-            className="font-semibold text-ink underline decoration-ink/40 underline-offset-2 hover:decoration-ink"
-          >
-            {match.number ? `#${match.number} ` : ""}
-            {displayName(match, nameStyle)}
-          </button>
-          ? It links when you leave the box.
+          {t.rich("means", {
+            player: `${match.number ? `#${match.number} ` : ""}${displayName(match, nameStyle)}`,
+            link: (chunks) => (
+              <button
+                type="button"
+                onClick={() => link(match)}
+                className="font-semibold text-ink underline decoration-ink/40 underline-offset-2 hover:decoration-ink"
+              >
+                {chunks}
+              </button>
+            ),
+          })}
         </p>
       )}
     </li>
@@ -237,31 +244,32 @@ export function MatchPanel() {
   const addGoal = useStudio((s) => s.addGoal);
   const listId = useId();
   const kind = useStudio((s) => s.design.kind);
+  const t = useTranslations("studio.match");
 
   const fixture = (
-    <Section title="Fixture">
+    <Section title={t("fixture")}>
       <FromFixtures team={team} />
-      <DbuMatchButton label="Get line-up and result from DBU" className="self-start" />
+      <DbuMatchButton kind="match" className="self-start" />
       <Segmented
-        label="Home or away"
+        label={t("homeAway")}
         value={m.isHome ? "home" : "away"}
         onChange={(v) => updateMatch({ isHome: v === "home" })}
         options={[
-          { value: "home", label: "Home" },
-          { value: "away", label: "Away" },
+          { value: "home", label: t("home") },
+          { value: "away", label: t("away") },
         ]}
       />
       <div className="grid grid-cols-[1fr_6rem] gap-3">
-        <Field label="Opponent" htmlFor={FIELD.opponent}>
+        <Field label={t("opponent")} htmlFor={FIELD.opponent}>
           <TextInput
             id={FIELD.opponent}
             value={m.opponent}
-            placeholder="Who are you playing?"
+            placeholder={t("opponentPlaceholder")}
             onChange={(e) => updateMatch({ opponent: e.target.value })}
           />
         </Field>
         <TextField
-          label="Short name"
+          label={t("short")}
           value={m.opponentShort}
           // Shows what the graphics use when this is left empty (the initials).
           placeholder={m.opponent.trim() ? initials(m.opponent) : "ABC"}
@@ -270,44 +278,44 @@ export function MatchPanel() {
         />
       </div>
       <TextField
-        label="Competition"
+        label={t("competition")}
         value={m.competition}
-        placeholder="League, cup or friendly"
+        placeholder={t("competitionPlaceholder")}
         onChange={(competition) => updateMatch({ competition })}
       />
       <div className="grid grid-cols-2 gap-3">
         <TextField
-          label="Date"
+          label={t("date")}
           type="date"
           value={m.date}
           onChange={(date) => updateMatch({ date })}
         />
         <TextField
-          label="Kick-off"
+          label={t("kickoff")}
           type="time"
           value={m.kickoff}
           onChange={(kickoff) => updateMatch({ kickoff })}
         />
       </div>
-      <TextField label="Venue" value={m.venue} onChange={(venue) => updateMatch({ venue })} />
+      <TextField label={t("venue")} value={m.venue} onChange={(venue) => updateMatch({ venue })} />
     </Section>
   );
   const badge = (
-    <Section title="Opponent badge">
+    <Section title={t("badge")}>
       <ImageField
-        label="Opponent crest"
+        label={t("crest")}
         value={m.opponentCrest}
         purpose="crest"
         onChange={(opponentCrest) => updateMatch({ opponentCrest })}
       />
       <div className="grid grid-cols-2 gap-3">
         <ColorField
-          label="Their main colour"
+          label={t("theirMain")}
           value={m.opponentColors.primary}
           onChange={(primary) => updateMatch({ opponentColors: { ...m.opponentColors, primary } })}
         />
         <ColorField
-          label="Their second colour"
+          label={t("theirSecond")}
           value={m.opponentColors.secondary}
           onChange={(secondary) =>
             updateMatch({ opponentColors: { ...m.opponentColors, secondary } })
@@ -319,8 +327,8 @@ export function MatchPanel() {
   const counted = matchScore({ ...m, autoScore: true });
   const ftOff = scoreMismatch(m);
   const htOff = scoreMismatch(m, true);
-  const usName = team.name || "Us";
-  const themName = m.opponent || "Them";
+  const usName = team.name || t("us");
+  const themName = m.opponent || t("them");
   const mismatchNote = (half: boolean) => {
     const goalsLine = half ? line(counted.htUs, counted.htThem) : line(counted.us, counted.them);
     const typed = half ? line(m.htOurScore, m.htTheirScore) : line(m.ourScore, m.theirScore);
@@ -330,8 +338,11 @@ export function MatchPanel() {
         className="flex items-center justify-between gap-3 rounded-[4px] border-2 border-card-ink bg-card px-3 py-2 text-[13px] text-card-ink"
       >
         <span>
-          The goals add up to <b className="tabular-nums">{goalsLine}</b>, but the{" "}
-          {half ? "half-time " : ""}score says <b className="tabular-nums">{typed}</b>.
+          {t.rich(half ? "mismatchHalf" : "mismatch", {
+            goals: goalsLine,
+            typed,
+            b: (chunks) => <b className="tabular-nums">{chunks}</b>,
+          })}
         </span>
         <Button
           size="sm"
@@ -344,19 +355,15 @@ export function MatchPanel() {
             )
           }
         >
-          Use {goalsLine}
+          {t("useScore", { score: goalsLine })}
         </Button>
       </div>
     );
   };
   const autoSwitch = (
     <SwitchRow
-      label="Count the score from the goals"
-      hint={
-        m.autoScore
-          ? "Full time and half time follow the scorers below."
-          : "Type the score yourself, e.g. when you don't know every scorer."
-      }
+      label={t("auto")}
+      hint={m.autoScore ? t("autoOn") : t("autoOff")}
       checked={m.autoScore}
       onChange={(autoScore) =>
         // Start the boxes from the counted score so turning this off changes nothing.
@@ -386,12 +393,12 @@ export function MatchPanel() {
     </div>
   );
   const score = (
-    <Section title="Score">
+    <Section title={t("score")}>
       <div id={m.autoScore ? FIELD.score : undefined} tabIndex={-1} className="outline-none">
         {autoSwitch}
       </div>
       {m.autoScore ? (
-        scoreboard(counted.us, counted.them, "Full time")
+        scoreboard(counted.us, counted.them, t("fullTime"))
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <Score
@@ -421,7 +428,7 @@ export function MatchPanel() {
           <div key={side} className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <h3 className="text-[13px] font-medium">
-                {side === "us" ? usName : themName} scorers
+                {t("scorers", { team: side === "us" ? usName : themName })}
               </h3>
               <Button
                 id={side === "us" ? FIELD.goals : undefined}
@@ -436,7 +443,7 @@ export function MatchPanel() {
                 }}
               >
                 <PlusIcon size={14} />
-                Add goal
+                {t("addGoal")}
               </Button>
             </div>
             {goals.length > 0 && (
@@ -454,21 +461,15 @@ export function MatchPanel() {
           </div>
         );
       })}
-      <p className="text-xs text-ink-soft">
-        The highlighted ball marks the goal shown on the Goal graphic. Pick a name from the list to
-        link it to your squad.
-      </p>
+      <p className="text-xs text-ink-soft">{t("goalNote")}</p>
     </Section>
   );
   const halftime = (
-    <Section title="Half time">
+    <Section title={t("halfTime")}>
       {m.autoScore ? (
         <>
-          {scoreboard(counted.htUs, counted.htThem, "Half time")}
-          <p className="-mt-1 text-xs text-ink-soft">
-            Counted from goals up to the 45th minute, stoppage time included. Turn off “Count the
-            score from the goals” under Score to type it.
-          </p>
+          {scoreboard(counted.htUs, counted.htThem, t("halfTime"))}
+          <p className="-mt-1 text-xs text-ink-soft">{t("htNote")}</p>
         </>
       ) : (
         <div className="grid grid-cols-2 gap-3">
@@ -537,10 +538,11 @@ function SubsSection() {
   const offList = starters.length ? starters : team.players;
   const onList = bench.length ? bench : team.players;
   const firstOpen = team.match.subs.find((s) => !s.onId || !s.offId);
+  const t = useTranslations("studio.match");
 
   return (
     <Section
-      title="Substitutions"
+      title={t("subs")}
       action={
         <Button
           id={team.match.subs.length === 0 ? FIELD.subs : undefined}
@@ -554,12 +556,12 @@ function SubsSection() {
           }}
         >
           <PlusIcon size={14} />
-          Add substitution
+          {t("addSub")}
         </Button>
       }
     >
       {team.match.subs.length === 0 ? (
-        <p className="text-sm text-ink-soft">No substitutions yet.</p>
+        <p className="text-sm text-ink-soft">{t("noSubs")}</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {team.match.subs.map((sub) => (
@@ -569,12 +571,12 @@ function SubsSection() {
               tabIndex={sub.id === firstOpen?.id ? -1 : undefined}
               className="grid grid-cols-[4rem_1fr_2.25rem] items-start gap-2 border-b-2 border-rule/60 pb-3 outline-none last:border-b-0 last:pb-0"
             >
-              <Field label="Minute" htmlFor={subFieldId(sub.id)}>
+              <Field label={t("minute")} htmlFor={subFieldId(sub.id)}>
                 <TextInput
                   id={subFieldId(sub.id)}
                   inputMode="numeric"
                   value={sub.minute}
-                  placeholder="Min"
+                  placeholder={t("min")}
                   onChange={(e) =>
                     updateSub(sub.id, { minute: e.target.value.replace(/[^\d+]/g, "") })
                   }
@@ -583,15 +585,15 @@ function SubsSection() {
               </Field>
               <div className="flex flex-col gap-2">
                 <Select
-                  label="On"
+                  label={t("on")}
                   value={sub.onId ?? ""}
-                  items={playerItems(onList, "Who came on")}
+                  items={playerItems(onList, t("whoOn"))}
                   onChange={(id) => updateSub(sub.id, { onId: id || null })}
                 />
                 <Select
-                  label="Off"
+                  label={t("off")}
                   value={sub.offId ?? ""}
-                  items={playerItems(offList, "Who went off")}
+                  items={playerItems(offList, t("whoOff"))}
                   onChange={(id) => updateSub(sub.id, { offId: id || null })}
                 />
               </div>
@@ -599,7 +601,7 @@ function SubsSection() {
                 variant="ghost"
                 size="icon"
                 className="mt-6"
-                aria-label="Remove substitution"
+                aria-label={t("removeSub")}
                 onClick={() => removeSub(sub.id)}
               >
                 <TrashIcon size={16} />
@@ -615,18 +617,19 @@ function SubsSection() {
 function MotmSection() {
   const team = useActiveTeam();
   const updateMatch = useStudio((s) => s.updateMatch);
+  const t = useTranslations("studio.match");
   return (
-    <Section title="Player of the match">
+    <Section title={t("motm")}>
       <Select
         id={FIELD.motm}
-        label="Player"
+        label={t("player")}
         value={team.match.motmId ?? ""}
-        items={playerItems(team.players, "Pick a player")}
+        items={playerItems(team.players, t("pickPlayer"))}
         onChange={(id) => updateMatch({ motmId: id || null })}
       />
       <TextField
-        label="Line underneath"
-        hint="Optional, e.g. a stat or the sponsor of the award."
+        label={t("lineUnder")}
+        hint={t("lineUnderHint")}
         value={team.match.motmNote}
         onChange={(motmNote) => updateMatch({ motmNote })}
       />
@@ -637,9 +640,11 @@ function MotmSection() {
 function FixturesSection() {
   const team = useActiveTeam();
   const { addFixture, updateFixture, removeFixture, playFixture } = useStudio.getState();
+  const t = useTranslations("studio.match");
+  const tDbu = useTranslations("dbu.fixtures");
   return (
     <Section
-      title="Fixtures and results"
+      title={t("fixtures")}
       action={
         <Button
           id={FIELD.fixtures}
@@ -653,16 +658,14 @@ function FixturesSection() {
           }}
         >
           <PlusIcon size={14} />
-          Add fixture
+          {t("addFixture")}
         </Button>
       }
     >
-      <p className="-mt-2 text-xs text-ink-soft">
-        For the Fixtures graphic. Fill in a score to show it as a result.
-      </p>
+      <p className="-mt-2 text-xs text-ink-soft">{t("fixturesNote")}</p>
       <DbuTools team={team} />
       {team.fixtures.length === 0 ? (
-        <p className="text-sm text-ink-soft">No fixtures yet.</p>
+        <p className="text-sm text-ink-soft">{t("noFixtures")}</p>
       ) : (
         <ul className="flex flex-col gap-4">
           {team.fixtures.map((f) => (
@@ -677,7 +680,7 @@ function FixturesSection() {
                 )}
                 <TextField
                   id={fixtureFieldId(f.id)}
-                  label="Opponent"
+                  label={t("opponent")}
                   value={f.opponent}
                   onChange={(opponent) => updateFixture(f.id, { opponent })}
                   className="flex-1"
@@ -685,30 +688,32 @@ function FixturesSection() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`Remove ${f.opponent || "fixture"}`}
+                  aria-label={
+                    f.opponent.trim() ? t("remove", { label: f.opponent }) : t("removeFixture")
+                  }
                   onClick={() => removeFixture(f.id)}
                 >
                   <TrashIcon size={16} />
                 </Button>
               </div>
               <Segmented
-                label="Home or away"
+                label={t("homeAway")}
                 value={f.isHome ? "home" : "away"}
                 onChange={(v) => updateFixture(f.id, { isHome: v === "home" })}
                 options={[
-                  { value: "home", label: "Home" },
-                  { value: "away", label: "Away" },
+                  { value: "home", label: t("home") },
+                  { value: "away", label: t("away") },
                 ]}
               />
               <div className="grid grid-cols-[1fr_6.5rem] gap-2">
                 <TextField
-                  label="Date"
+                  label={t("date")}
                   type="date"
                   value={f.date}
                   onChange={(date) => updateFixture(f.id, { date })}
                 />
                 <TextField
-                  label="Kick-off"
+                  label={t("kickoff")}
                   type="time"
                   value={f.kickoff}
                   onChange={(kickoff) => updateFixture(f.id, { kickoff })}
@@ -716,13 +721,13 @@ function FixturesSection() {
               </div>
               <div className="grid grid-cols-[1fr_6.5rem] gap-2">
                 <TextField
-                  label="Competition"
+                  label={t("competition")}
                   value={f.competition}
                   onChange={(competition) => updateFixture(f.id, { competition })}
                 />
                 <TextField
-                  label="Score"
-                  placeholder="e.g. 2-1"
+                  label={t("result")}
+                  placeholder={t("resultPlaceholder")}
                   value={f.score}
                   onChange={(score) => updateFixture(f.id, { score })}
                 />
@@ -734,11 +739,11 @@ function FixturesSection() {
                   className="self-start"
                   onClick={() => {
                     playFixture(f.id);
-                    toast.success(`The match graphics are set for ${f.opponent}`);
+                    toast.success(tDbu("used", { opponent: f.opponent }));
                   }}
                 >
                   <SoccerBallIcon size={14} />
-                  Use for the match graphics
+                  {tDbu("useForMatch")}
                 </Button>
               )}
             </li>
@@ -749,15 +754,21 @@ function FixturesSection() {
   );
 }
 
-const fixtureLabel = (f: Fixture) =>
-  `${f.date ? `${formatMatchDate(f.date)} · ` : ""}${f.opponent} (${f.isHome ? "H" : "A"})${
-    f.score.trim() ? ` ${f.score.trim()}` : ""
-  }`;
-
 /** Fill the match in from a fixture: the next one on match day, or a played one for its result. */
 function FromFixtures({ team }: { team: Team }) {
   const playFixture = useStudio((s) => s.playFixture);
+  const t = useTranslations("dbu.fixtures");
+  const language: Language = useLocale() === "da" ? "da" : "en";
   const m = team.match;
+  const label = (f: Fixture) =>
+    [
+      f.date && `${formatMatchDate(f.date, language)} ·`,
+      f.opponent,
+      `(${f.isHome ? t("home") : t("away")})`,
+      f.score.trim(),
+    ]
+      .filter(Boolean)
+      .join(" ");
   const all = team.fixtures
     .filter((f) => f.opponent.trim())
     .sort((a, b) => `${a.date}T${a.kickoff}`.localeCompare(`${b.date}T${b.kickoff}`));
@@ -767,11 +778,11 @@ function FromFixtures({ team }: { team: Team }) {
   );
   return (
     <Select
-      label="Fill in from your fixtures"
+      label={t("fillFrom")}
       value={current?.id ?? ""}
       items={[
-        { value: "", label: "Pick a fixture" },
-        ...all.map((f) => ({ value: f.id, label: fixtureLabel(f) })),
+        { value: "", label: t("pick") },
+        ...all.map((f) => ({ value: f.id, label: label(f) })),
       ]}
       onChange={(id) => id && playFixture(id)}
     />
@@ -784,6 +795,8 @@ function DbuTools({ team }: { team: Team }) {
   const playFixture = useStudio((s) => s.playFixture);
   const [open, setOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const t = useTranslations("dbu.fixtures");
+  const tErrors = useTranslations("dbu.errors");
 
   async function apply(data: DbuImport, link: DbuLink) {
     const fresh = toFixtures(data);
@@ -795,20 +808,27 @@ function DbuTools({ team }: { team: Team }) {
     const next = nextFixture(now.fixtures);
     const title =
       added || updated
-        ? `From DBU: ${[added && `${added} new`, updated && `${updated} updated`].filter(Boolean).join(", ")}`
-        : "Your fixtures are up to date with DBU";
+        ? t("fromDbu", {
+            summary: [
+              added && t("added", { count: added }),
+              updated && t("updated", { count: updated }),
+            ]
+              .filter(Boolean)
+              .join(", "),
+          })
+        : t("upToDate");
     const isCurrent =
       !!next &&
       next.date === now.match.date &&
       next.opponent.trim().toLowerCase() === now.match.opponent.trim().toLowerCase();
     if (next && matchIsBlank(now)) {
       playFixture(next.id);
-      toast.success(title, { description: `The match graphics are set for ${next.opponent}.` });
+      toast.success(title, { description: t("matchSet", { opponent: next.opponent }) });
     } else {
       toast.success(title, {
         action:
           next && !isCurrent
-            ? { label: `Next: ${next.opponent}`, onClick: () => playFixture(next.id) }
+            ? { label: t("next", { opponent: next.opponent }), onClick: () => playFixture(next.id) }
             : undefined,
       });
     }
@@ -819,9 +839,7 @@ function DbuTools({ team }: { team: Team }) {
     try {
       await apply(await getDbuImport(link), link);
     } catch (e) {
-      toast.error("Couldn't update from DBU", {
-        description: e instanceof DbuError ? e.message : "Try again in a minute.",
-      });
+      toast.error(t("updateFailed"), { description: tErrors(dbuErrorKey(e)) });
     } finally {
       setUpdating(false);
     }
@@ -833,16 +851,16 @@ function DbuTools({ team }: { team: Team }) {
         <>
           <Button size="sm" onClick={() => update(team.dbu!)} disabled={updating}>
             <ArrowsClockwiseIcon size={14} className={clsx(updating && "animate-spin")} />
-            {updating ? "Updating…" : "Update from DBU"}
+            {updating ? t("updating") : t("update")}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setOpen(true)} disabled={updating}>
-            Change DBU teams
+            {t("changeTeams")}
           </Button>
         </>
       ) : (
         <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
           <DownloadSimpleIcon size={14} />
-          Import from DBU (Denmark)
+          {t("import")}
         </Button>
       )}
       <DbuImportDialog

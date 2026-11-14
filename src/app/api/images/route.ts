@@ -40,6 +40,7 @@ export async function POST(request: Request) {
       413,
       "too-large",
       `Images can be up to ${Math.round(env.limits.imageBytes / 1024 / 1024)} MB.`,
+      { max: env.limits.imageBytes },
     );
   }
   if (body.byteLength === 0) return problem(400, "empty", "That upload was empty.");
@@ -48,12 +49,9 @@ export async function POST(request: Request) {
   if (!saved.ok) {
     const status =
       saved.error.code === "busy" ? 503 : saved.error.code === "not-an-image" ? 415 : 413;
-    return problem(
-      status,
-      saved.error.code,
-      saved.error.message,
-      "used" in saved.error ? saved.error : undefined,
-    );
+    // The code is what the client words; the rest (limits, usage) fills in its message.
+    const { code, message, ...extra } = saved.error;
+    return problem(status, code, message, extra);
   }
   return json(
     { ...saved.image, reused: saved.reused, used: usedBytes(id), limit: env.limits.accountBytes },

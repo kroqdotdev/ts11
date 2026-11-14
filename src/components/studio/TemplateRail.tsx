@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { useTranslations } from "next-intl";
 import { memo } from "react";
 import { Graphic } from "@/components/graphics/Graphic";
 import { FORMATS } from "@/components/graphics/theme";
@@ -45,10 +46,11 @@ export function TemplateRail() {
   const team = useActiveTeam();
   const design = useStudio((s) => s.design);
   const updateDesign = useStudio((s) => s.updateDesign);
+  const t = useTranslations("studio");
 
   return (
     <nav
-      aria-label="Graphics"
+      aria-label={t("rail")}
       className="-mx-4 scrollbar-none overflow-x-auto px-4 py-2 lg:-mx-2 lg:px-2 xl:mx-0 xl:overflow-visible xl:px-0 xl:py-0"
     >
       <ul className="flex w-max gap-3 lg:gap-4 xl:w-[100px] xl:flex-col xl:gap-4">
@@ -59,7 +61,7 @@ export function TemplateRail() {
               <button
                 type="button"
                 aria-pressed={active}
-                title={k.hint}
+                title={t(`kinds.${k.id}.hint`)}
                 onClick={() => {
                   updateDesign({ kind: k.id });
                   // Open the tab that feeds this graphic, unless styles are being compared.
@@ -84,7 +86,7 @@ export function TemplateRail() {
                     active ? "text-card" : "text-chalk/80 group-hover:text-chalk",
                   )}
                 >
-                  {k.label}
+                  {t(`kinds.${k.id}.label`)}
                 </span>
               </button>
             </li>

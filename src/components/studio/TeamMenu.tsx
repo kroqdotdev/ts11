@@ -9,6 +9,7 @@ import {
   TrashIcon,
   UploadSimpleIcon,
 } from "@phosphor-icons/react";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button, Dialog, MenuButton, Select } from "@/components/ui/controls";
@@ -30,6 +31,8 @@ export function TeamMenu() {
   // them from the account; that's done club by club, or by deleting the account.
   const syncing = useSyncState((s) => s.status !== "off" && s.status !== "unverified");
   const file = useRef<HTMLInputElement>(null);
+  const t = useTranslations("studio.team");
+  const teamName = team.name.trim() || t("thisTeam");
 
   function backup() {
     const data = JSON.stringify({
@@ -41,9 +44,7 @@ export function TeamMenu() {
       new Blob([data], { type: "application/json" }),
       `teamsheet11-backup-${new Date().toISOString().slice(0, 10)}.json`,
     );
-    toast.success("Backup downloaded", {
-      description: "Keep the file somewhere safe. Restore it here on any device.",
-    });
+    toast.success(t("backupDone"), { description: t("backupHint") });
   }
 
   async function restore(f: File | undefined) {
@@ -62,12 +63,12 @@ export function TeamMenu() {
         activeTeamId: data.activeTeamId,
         design: { ...s.design, ...data.design },
       });
-      const n = `${data.teams.length} ${data.teams.length === 1 ? "team" : "teams"}`;
-      toast.success("Backup restored", {
-        description: keep ? `${n} added to your clubs.` : `${n} loaded.`,
+      const count = data.teams.length;
+      toast.success(t("restored"), {
+        description: keep ? t("restoredAdded", { count }) : t("restoredLoaded", { count }),
       });
     } catch {
-      toast.error("That file is not a teamsheet11 backup");
+      toast.error(t("notBackup"));
     } finally {
       if (file.current) file.current.value = "";
     }
@@ -76,35 +77,35 @@ export function TeamMenu() {
   return (
     <div className="flex min-w-0 items-center gap-1">
       <Select
-        label="Team"
+        label={t("label")}
         hideLabel
         value={team.id}
-        items={teams.map((t) => ({ value: t.id, label: t.name || "Untitled team" }))}
+        items={teams.map((x) => ({ value: x.id, label: x.name || t("untitled") }))}
         onChange={setActiveTeam}
         className="w-44 min-w-0 sm:w-52"
         triggerClassName="border-chalk/20 bg-chalk/8 text-chalk hover:border-chalk/45 data-popup-open:border-chalk/60"
       />
       <MenuButton
-        label="Team options"
+        label={t("options")}
         align="start"
         triggerClassName="grid size-10 shrink-0 place-items-center rounded-md text-chalk/75 hover:bg-chalk/10 hover:text-chalk data-popup-open:bg-chalk/10"
         trigger={<DotsThreeIcon size={22} weight="bold" />}
         items={[
           {
-            label: "Add a team",
+            label: t("add"),
             icon: <PlusIcon size={16} />,
             onSelect: () => useUi.getState().setSetupOpen(true),
           },
           {
-            label: `Delete ${team.name || "this team"}`,
+            label: t("delete", { name: teamName }),
             icon: <TrashIcon size={16} />,
             danger: true,
             onSelect: () => setConfirm("delete"),
           },
           "separator",
-          { label: "Download backup", icon: <DownloadSimpleIcon size={16} />, onSelect: backup },
+          { label: t("backup"), icon: <DownloadSimpleIcon size={16} />, onSelect: backup },
           {
-            label: "Restore backup",
+            label: t("restore"),
             icon: <UploadSimpleIcon size={16} />,
             onSelect: () => file.current?.click(),
           },
@@ -113,7 +114,7 @@ export function TeamMenu() {
             : [
                 "separator" as const,
                 {
-                  label: "Start over",
+                  label: t("startOver"),
                   icon: <ArrowCounterClockwiseIcon size={16} />,
                   danger: true,
                   onSelect: () => setConfirm("reset"),
@@ -121,7 +122,7 @@ export function TeamMenu() {
               ]),
           "separator",
           {
-            label: "Source code",
+            label: t("source"),
             icon: <GithubLogoIcon size={16} />,
             onSelect: () => window.open(SOURCE_URL, "_blank", "noopener,noreferrer"),
           },
@@ -135,19 +136,19 @@ export function TeamMenu() {
         // Opened from "Restore from backup" in the menu, so it needs no Tab stop of its own.
         tabIndex={-1}
         aria-hidden
-        aria-label="Backup file"
+        aria-label={t("backupFile")}
         onChange={(e) => void restore(e.target.files?.[0])}
       />
 
       <Dialog
         open={confirm === "delete"}
         onOpenChange={(o) => !o && setConfirm(null)}
-        title={`Delete ${team.name || "this team"}?`}
-        description="Its squad, line-up and match details are removed from this browser. Download a backup first if you might need them."
+        title={t("deleteTitle", { name: teamName })}
+        description={t("deleteBody")}
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirm(null)}>
-              Keep team
+              {t("keep")}
             </Button>
             <Button
               variant="destructive"
@@ -155,10 +156,10 @@ export function TeamMenu() {
                 const name = team.name;
                 useStudio.getState().removeTeam(team.id);
                 setConfirm(null);
-                toast(`Deleted ${name || "team"}`);
+                toast(name.trim() ? t("deleted", { name }) : t("deletedNoName"));
               }}
             >
-              Delete team
+              {t("deleteTeam")}
             </Button>
           </>
         }
@@ -166,22 +167,22 @@ export function TeamMenu() {
       <Dialog
         open={confirm === "reset"}
         onOpenChange={(o) => !o && setConfirm(null)}
-        title="Start over?"
-        description="Every team, player and design setting in this browser is replaced with the example club. This cannot be undone."
+        title={t("resetTitle")}
+        description={t("resetBody")}
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirm(null)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={() => {
                 useStudio.getState().resetAll();
                 setConfirm(null);
-                toast("Started over with the example club");
+                toast(t("resetDone"));
               }}
             >
-              Start over
+              {t("startOver")}
             </Button>
           </>
         }

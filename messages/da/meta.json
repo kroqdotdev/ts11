@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "{app}: gratis kampgrafik til din klub",
+    "description": "Lav grafik til startopstilling, dagens hold, kampdag og slutresultat på få minutter. Gratis, uden login og uden vandmærke."
+  },
+  "studio": {
+    "title": "Studio",
+    "description": "Lav grafik til startopstilling, dagens hold, kampdag og slutresultat."
+  },
+  "account": {
+    "title": "Lagerplads og konto",
+    "description": "Dine gemte klubber, uploadede billeder og kontoindstillinger."
+  },
+  "resetPassword": {
+    "title": "Vælg en ny adgangskode",
+    "description": "Vælg en ny adgangskode til din {app}-konto."
+  },
+  "privacy": {
+    "title": "Privatliv",
+    "description": "Hvad {app} gemmer, hvor det ligger, og hvor længe, med eller uden konto."
+  }
+}

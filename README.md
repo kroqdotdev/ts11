@@ -75,6 +75,18 @@ are written to `data/dev/outbox/`, images to `data/dev/objects/`, and the databa
 - `src/lib/kinds.ts`: the list of graphics; `src/lib/kits.ts`: kit colour presets.
 - `src/lib/brand.ts`: the product name and domain.
 
+## Languages
+
+English and Danish ([docs/i18n.md](docs/i18n.md) has the rules and glossary).
+
+- `src/i18n/`: next-intl setup. English pages at the root, Danish under `/da` with Danish paths
+  (`/da/konto`, `/da/privatliv`); `src/proxy.ts` sends a Danish browser to `/da` on its first
+  visit. Pages live in `src/app/[locale]/`.
+- `messages/<lang>/<area>.json`: interface text. Danish must have the same keys as English
+  (checked by a unit test).
+- `src/lib/graphicText.ts`: the words printed on graphics, in the club's own graphics language
+  (`team.language`), which can differ from the interface language.
+
 ## Accounts
 
 Optional. Signed out, the app is unchanged. Signed in with a confirmed email, the studio's data
@@ -94,7 +106,7 @@ syncs to the account.
   happens the first time a browser meets an account (asks before mixing clubs).
 - UI: `src/components/account/` (sign-in dialog, account menu, sync chip, verify banner,
   `/account` storage page), `src/components/sync/` (provider and merge dialog),
-  `src/app/reset-password`.
+  `src/app/[locale]/reset-password`.
 
 Limits (env, see `.env.example`): 2 MB and 2560 px per image, 250 MB per account, 50 clubs, 60
 uploads an hour. A full account blocks uploads with a message; nothing is deleted for you.

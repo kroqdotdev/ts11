@@ -1,6 +1,7 @@
 "use client";
 
 import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
@@ -8,6 +9,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  * (touch and trackpads can still swipe). The buttons dim at either end.
  */
 export function Reel({ children, className }: { children: ReactNode; className?: string }) {
+  const t = useTranslations("landing.reel");
   const list = useRef<HTMLOListElement>(null);
   const [edges, setEdges] = useState({ start: true, end: false });
 
@@ -54,7 +56,7 @@ export function Reel({ children, className }: { children: ReactNode; className?:
           className={button}
           onClick={() => move(-1)}
           disabled={edges.start}
-          aria-label="Earlier graphics"
+          aria-label={t("earlier")}
         >
           <CaretLeftIcon size={18} weight="bold" />
         </button>
@@ -63,7 +65,7 @@ export function Reel({ children, className }: { children: ReactNode; className?:
           className={button}
           onClick={() => move(1)}
           disabled={edges.end}
-          aria-label="Later graphics"
+          aria-label={t("later")}
         >
           <CaretRightIcon size={18} weight="bold" />
         </button>

@@ -1,3 +1,4 @@
+import { textFor } from "./graphicText";
 import { uid } from "./id";
 import type { Colors, DbuLink, Fixture, Goal, Match, Player, Team } from "./types";
 
@@ -108,20 +109,39 @@ export interface DbuMatchPage {
 
 export const selectionKey = (t: { teamId: string; poolId: string }) => `${t.teamId}_${t.poolId}`;
 
-/** A problem the import dialog can show as is. */
-export class DbuError extends Error {}
+/** Why a DBU lookup failed, as a key into the `dbu.errors` messages. */
+export type DbuErrorKey =
+  "network" | "unavailable" | "changed" | "notFound" | "unknownTeam" | "rateLimited" | "other";
+
+const ERROR_KEYS: Record<string, DbuErrorKey> = {
+  "dbu-unavailable": "unavailable",
+  "dbu-changed": "changed",
+  "dbu-not-found": "notFound",
+  "unknown-team": "unknownTeam",
+  "rate-limited": "rateLimited",
+};
+
+/** A failed lookup; the dialogs word `key` in the reader's language. */
+export class DbuError extends Error {
+  constructor(readonly key: DbuErrorKey) {
+    super(`DBU lookup failed: ${key}`);
+  }
+}
 
 async function getJson<T>(url: string): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, { credentials: "same-origin" });
   } catch {
-    throw new DbuError("Couldn't reach teamsheet11. Check your connection and try again.");
+    throw new DbuError("network");
   }
-  const body = (await res.json().catch(() => ({}))) as { message?: string };
-  if (!res.ok) throw new DbuError(body.message ?? "DBU didn't answer. Try again in a minute.");
+  const body = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) throw new DbuError(ERROR_KEYS[body.error ?? ""] ?? "other");
   return body as T;
 }
+
+/** The message key for any error from a DBU lookup. */
+export const dbuErrorKey = (e: unknown): DbuErrorKey => (e instanceof DbuError ? e.key : "other");
 
 export async function searchDbuClubs(q: string): Promise<DbuClubHit[]> {
   const res = await getJson<{ clubs: DbuClubHit[] }>(
@@ -329,6 +349,8 @@ export interface DbuMatchPlan {
  */
 export function planFromDbuMatch(team: Team, page: DbuMatchPage): DbuMatchPlan {
   const ours = team.match.isHome ? "home" : "away";
+  // Printed on the graphics, so in the club's graphics language.
+  const ownGoal = textFor(team).ownGoal;
   const score = page.score
     ? ours === "home"
       ? { us: page.score.home, them: page.score.away }
@@ -340,7 +362,7 @@ export function planFromDbuMatch(team: Team, page: DbuMatchPage): DbuMatchPlan {
       const listedOurs = e.side === ours;
       const forUs = e.kind === "own" && ownGoalsFlip ? !listedOurs : listedOurs;
       const player = forUs && e.kind !== "own" ? findPlayerByName(team.players, e.scorer) : null;
-      const name = e.kind === "own" ? "Own goal" : player ? player.name : e.scorer;
+      const name = e.kind === "own" ? ownGoal : player ? player.name : e.scorer;
       return {
         id: uid(),
         side: forUs ? "us" : "them",

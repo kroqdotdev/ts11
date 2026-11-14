@@ -5,10 +5,11 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { Graphic } from "@/components/graphics/Graphic";
 import { FORMATS } from "@/components/graphics/theme";
-import { graphicFilename, matchSlug, renderNodePng } from "@/lib/export";
-import { graphicIssues } from "@/lib/issues";
-import { KIND_LABEL, KINDS } from "@/lib/kinds";
+import { ExportError, graphicFilename, matchSlug, renderNodePng, slug } from "@/lib/export";
+import { graphicIssues, type Issue } from "@/lib/issues";
+import { KINDS } from "@/lib/kinds";
 import type { Design, FormatId, GraphicKind, Team } from "@/lib/types";
+import type { FileNaming } from "./words";
 
 export interface BatchResult {
   zip: Blob;
@@ -39,6 +40,7 @@ export async function renderAll(
   design: Design,
   formats: FormatId[],
   onProgress: (done: number, total: number) => void,
+  naming: FileNaming,
 ): Promise<{ files: { name: string; blob: Blob }[]; skipped: GraphicKind[] }> {
   const { jobs, skipped } = plan(team, design, formats);
   if (jobs.length === 0) return { files: [], skipped };
@@ -75,10 +77,10 @@ export async function renderAll(
       );
       await nextFrame();
       const node = host.firstElementChild?.firstElementChild;
-      if (!(node instanceof HTMLElement)) throw new Error("The graphic could not be drawn.");
+      if (!(node instanceof HTMLElement)) throw new ExportError("notDrawn");
       const blob = await renderNodePng(node, design.font);
-      const name =
-        formats.length > 1 ? `${format}/${graphicFilename(team, d)}` : graphicFilename(team, d);
+      const file = graphicFilename(team, naming.graphic(kind, format), naming.words);
+      const name = formats.length > 1 ? `${slug(naming.formatLabel(format))}/${file}` : file;
       files.push({ name, blob });
     }
     onProgress(jobs.length, jobs.length);
@@ -95,19 +97,22 @@ export async function exportAll(
   design: Design,
   formats: FormatId[],
   onProgress: (done: number, total: number) => void,
+  naming: FileNaming,
+  /** An issue in words, for the note on what was left out. */
+  issueText: (issue: Issue) => string,
 ): Promise<BatchResult> {
-  const { files: pngs, skipped } = await renderAll(team, design, formats, onProgress);
+  const { files: pngs, skipped } = await renderAll(team, design, formats, onProgress, naming);
   if (pngs.length === 0) return { zip: new Blob(), filename: "", count: 0, skipped };
   const files: Record<string, Uint8Array> = {};
   for (const f of pngs) files[f.name] = new Uint8Array(await f.blob.arrayBuffer());
 
   if (skipped.length > 0) {
-    files["not-included.txt"] = strToU8(
-      `Left out because they are still missing details:\n${skipped
+    files[naming.notIncluded] = strToU8(
+      `${naming.notIncludedTitle}\n${skipped
         .map(
           (k) =>
-            `- ${KIND_LABEL[k]}: ${graphicIssues(team, { ...design, kind: k })
-              .map((i) => i.message)
+            `- ${naming.kindLabel(k)}: ${graphicIssues(team, { ...design, kind: k })
+              .map(issueText)
               .join(", ")}`,
         )
         .join("\n")}\n`,
@@ -115,10 +120,10 @@ export async function exportAll(
   }
   // PNGs are already compressed, so store them as they are.
   const zipped = zipSync(files, { level: 0 });
-  const size = formats.length > 1 ? "all-sizes" : formats[0];
+  const size = formats.length > 1 ? naming.allSizes : slug(naming.formatLabel(formats[0]));
   return {
     zip: new Blob([zipped as BlobPart], { type: "application/zip" }),
-    filename: `${matchSlug(team)}-graphics-${size}.zip`,
+    filename: naming.zipName(matchSlug(team, naming.words), size),
     count: pngs.length,
     skipped,
   };

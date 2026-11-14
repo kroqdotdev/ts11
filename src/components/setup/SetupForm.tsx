@@ -3,9 +3,9 @@
 import { ArrowLeftIcon, CheckIcon, DownloadSimpleIcon, PaletteIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { useId, useState, type ReactNode } from "react";
 import { Graphic } from "@/components/graphics/Graphic";
-import { LOOKS } from "@/components/graphics/theme";
 import { ScaledGraphic } from "@/components/landing/ScaledGraphic";
 import { BadgePreview } from "@/components/BadgePreview";
 import { DbuImportDialog } from "@/components/dbu/DbuImportDialog";
@@ -32,7 +32,8 @@ import { PATTERNS, previewTeam, STEPS, type SetupFlow } from "./useSetupFlow";
 /** The draft club on a sample matchday graphic, so the first steps show the payoff. */
 function DraftPreview({ flow, note }: { flow: SetupFlow; note: string }) {
   const { d } = flow;
-  const team = previewTeam(d);
+  const t = useTranslations("setup");
+  const team = previewTeam(d, flow.draftWords);
   const design = {
     ...defaultDesign(),
     kind: "fixture" as const,
@@ -49,10 +50,10 @@ function DraftPreview({ flow, note }: { flow: SetupFlow; note: string }) {
       </div>
       <figcaption className="flex min-w-0 flex-col gap-1">
         <span className="truncate font-signage text-[24px] leading-none">
-          {d.name.trim() || "Your club"}
+          {d.name.trim() || t("yourClub")}
         </span>
         <span className="text-xs leading-relaxed text-ink-soft">{note}</span>
-        <span className="text-[11px] text-ink-soft/80">Preview: matchday.png</span>
+        <span className="text-[11px] text-ink-soft/80">{t("previewFile")}</span>
       </figcaption>
     </figure>
   );
@@ -64,24 +65,26 @@ function DraftPreview({ flow, note }: { flow: SetupFlow; note: string }) {
  */
 function KitPicker({ flow }: { flow: SetupFlow }) {
   const { d, patch } = flow;
+  const t = useTranslations("setup.kit");
+  const tk = useTranslations("setup.kits");
   const same = (a: { primary: string; secondary: string }) =>
     a.primary.toLowerCase() === d.colors.primary.toLowerCase() &&
     a.secondary.toLowerCase() === d.colors.secondary.toLowerCase();
   const options = [
     ...KITS.map((k) => ({
       id: k.id,
-      name: k.name,
+      name: tk(k.id),
       colors: { primary: k.primary, secondary: k.secondary },
       look: k.look,
     })),
-    ...(d.custom ? [{ id: "custom", name: "Your colours", colors: d.custom, look: d.look }] : []),
+    ...(d.custom ? [{ id: "custom", name: t("yours"), colors: d.custom, look: d.look }] : []),
   ];
   const anyOn = options.some((o) => same(o.colors));
   return (
     <div
       className="grid grid-cols-5 gap-2 sm:grid-cols-6"
       role="radiogroup"
-      aria-label="Kit"
+      aria-label={t("label")}
       onKeyDown={radioGroupKeys}
     >
       {options.map((k, idx) => {
@@ -128,21 +131,22 @@ function DbuStart({ flow }: { flow: SetupFlow }) {
   const { d, importDbu } = flow;
   const [open, setOpen] = useState(false);
   const count = d.dbu?.fixtures.length ?? 0;
+  const t = useTranslations("dbu.setup");
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-[4px] border-2 border-dashed border-ink/25 px-3 py-2.5">
       <p className="min-w-0 flex-1 text-[13px] leading-snug text-ink-soft">
         {d.dbu ? (
           <>
             <CheckIcon size={13} weight="bold" className="mr-1 inline text-ink" aria-hidden />
-            Imported from DBU with {count === 1 ? "1 fixture" : `${count} fixtures`}.
+            {t("done", { count })}
           </>
         ) : (
-          "Club in Denmark? Bring in your crest, colours and fixtures from DBU."
+          t("prompt")
         )}
       </p>
       <Button size="sm" onClick={() => setOpen(true)}>
         <DownloadSimpleIcon size={14} weight="bold" />
-        {d.dbu ? "Change" : "Import from DBU"}
+        {d.dbu ? t("change") : t("import")}
       </Button>
       <DbuImportDialog
         open={open}
@@ -192,12 +196,13 @@ function Question({
 }
 
 function Progress({ step }: { step: number }) {
+  const t = useTranslations("setup");
   return (
-    <ol className="flex gap-1" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
-      {STEPS.map((label, i) => (
+    <ol className="flex gap-1" aria-label={t("progress", { step: step + 1, total: STEPS.length })}>
+      {STEPS.map((name, i) => (
         <li
-          key={label}
-          title={label}
+          key={name}
+          title={t(`steps.${name}`)}
           className={clsx(
             "h-3 w-5 border-2 border-card-ink",
             i <= step ? "bg-card" : "bg-chalk/20",
@@ -218,6 +223,7 @@ export function SetupForm({
   narrow = false,
   onLeave,
   leaveLabel,
+  start,
 }: {
   flow: SetupFlow;
   variant: "screen" | "window";
@@ -226,6 +232,8 @@ export function SetupForm({
   /** Back out of the first question (e.g. back to the stands on the landing page). */
   onLeave?: () => void;
   leaveLabel?: string;
+  /** Bottom left of the first question when there's no way back, e.g. the language switch. */
+  start?: ReactNode;
 }) {
   const { d, patch, step, dir, go, kickoff, finish, parsed, ignored, restore, canContinue, last } =
     flow;
@@ -234,6 +242,8 @@ export function SetupForm({
   const shortId = useId();
   const screen = variant === "screen";
   const crestBg = useCrestBackground(d.crest);
+  const t = useTranslations("setup");
+  const tLooks = useTranslations("studio.looks");
 
   const form = (
     <form
@@ -263,21 +273,17 @@ export function SetupForm({
             transition={{ type: "spring", stiffness: 320, damping: 32 }}
           >
             {step === 0 && (
-              <Question
-                screen={screen}
-                title="What's your club called?"
-                hint="The crowd will spell it out. It also goes on your matchday graphics, and the short name goes on your badge."
-              >
+              <Question screen={screen} title={t("name.title")} hint={t("name.hint")}>
                 <div className="grid grid-cols-[1fr_6.5rem] gap-3">
                   <div className="flex flex-col gap-1.5">
                     <label htmlFor={nameId} className="text-[13px] font-medium">
-                      Club name
+                      {t("name.label")}
                     </label>
                     <TextInput
                       id={nameId}
                       autoFocus
                       value={d.name}
-                      placeholder="e.g. Ashby Vale"
+                      placeholder={t("name.placeholder")}
                       onChange={(e) =>
                         patch({
                           name: e.target.value,
@@ -291,7 +297,7 @@ export function SetupForm({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label htmlFor={shortId} className="text-[13px] font-medium">
-                      Short name
+                      {t("name.short")}
                     </label>
                     <TextInput
                       id={shortId}
@@ -307,21 +313,13 @@ export function SetupForm({
                 <DbuStart flow={flow} />
                 <DraftPreview
                   flow={flow}
-                  note={
-                    d.dbu && d.crest
-                      ? "Your crest from DBU. You can change it next."
-                      : "Your badge until you add a crest. Colours come next."
-                  }
+                  note={d.dbu && d.crest ? t("name.noteDbu") : t("name.note")}
                 />
               </Question>
             )}
 
             {step === 1 && (
-              <Question
-                screen={screen}
-                title="Add your crest"
-                hint="It goes on every graphic. A cut-out PNG sits straight on your colours; a crest on a white square gets a neat plate. Skip it to use a shield with your initials."
-              >
+              <Question screen={screen} title={t("crest.title")} hint={t("crest.hint")}>
                 <CrestField
                   value={d.crest}
                   onChange={(crest, crestKind) => patch({ crest, crestKind })}
@@ -329,27 +327,17 @@ export function SetupForm({
                 />
                 <DraftPreview
                   flow={flow}
-                  note={
-                    d.crest
-                      ? crestBg
-                        ? "On a square, so it sits on a plate. Remove the background to lose the plate."
-                        : "Looking sharp. It sits on every graphic like this."
-                      : "Without a crest, your initials go on a shield in your colours."
-                  }
+                  note={d.crest ? (crestBg ? t("crest.plate") : t("crest.sharp")) : t("crest.none")}
                 />
               </Question>
             )}
 
             {step === 2 && (
-              <Question
-                screen={screen}
-                title="What do you play in?"
-                hint="Pick the nearest kit and watch the crowd change. Fine-tune the colours below."
-              >
+              <Question screen={screen} title={t("kit.title")} hint={t("kit.hint")}>
                 <KitPicker flow={flow} />
                 <div className="grid grid-cols-2 gap-3">
                   <ColorField
-                    label="Main colour"
+                    label={t("kit.main")}
                     value={d.colors.primary}
                     onChange={(primary) => {
                       const colors = { ...d.colors, primary };
@@ -357,7 +345,7 @@ export function SetupForm({
                     }}
                   />
                   <ColorField
-                    label="Second colour"
+                    label={t("kit.second")}
                     value={d.colors.secondary}
                     onChange={(secondary) => {
                       const colors = { ...d.colors, secondary };
@@ -375,7 +363,7 @@ export function SetupForm({
                 <div
                   className="flex gap-1.5"
                   role="radiogroup"
-                  aria-label="Pattern"
+                  aria-label={t("kit.pattern")}
                   onKeyDown={radioGroupKeys}
                 >
                   {PATTERNS.map((look, idx) => (
@@ -399,7 +387,7 @@ export function SetupForm({
                         look={look}
                         size={26}
                       />
-                      {LOOKS[look].label}
+                      {tLooks(`${look}.label`)}
                     </button>
                   ))}
                 </div>
@@ -407,27 +395,23 @@ export function SetupForm({
             )}
 
             {step === 3 && (
-              <Question
-                screen={screen}
-                title="Who's in the squad?"
-                hint="Paste it from the team chat, messages and all. Numbers, positions, (c) for the captain and a “Subs:” line are picked up; the chat is left out."
-              >
+              <Question screen={screen} title={t("squad.title")} hint={t("squad.hint")}>
                 <div
                   className={clsx(
                     "flex gap-1.5",
                     screen && !narrow ? "items-center gap-4" : "flex-col",
                   )}
                 >
-                  <span className="shrink-0 text-[13px] font-medium">Players per side</span>
+                  <span className="shrink-0 text-[13px] font-medium">{t("squad.perSide")}</span>
                   <div className="min-w-0 flex-1">
                     <Segmented<`${TeamSize}`>
-                      label="Players per side"
+                      label={t("squad.perSide")}
                       value={`${d.size}`}
                       onChange={(v) => patch({ size: Number(v) as TeamSize })}
                       options={TEAM_SIZES.map((n) => ({
                         value: `${n}` as `${TeamSize}`,
                         label: `${n}`,
-                        title: `${n}-a-side`,
+                        title: t("squad.aSide", { count: n }),
                       }))}
                     />
                   </div>
@@ -444,12 +428,10 @@ export function SetupForm({
                   )}
                 >
                   <TextArea
-                    aria-label="Squad list"
+                    aria-label={t("squad.label")}
                     value={d.squad}
                     onChange={(e) => patch({ squad: e.target.value })}
-                    placeholder={
-                      "1 Tom Hadley GK\n4 Ryan Desai DEF\n10 Callum Price MID\n9 Harry Lund ATT\nSubs: Talbot, Fenn"
-                    }
+                    placeholder={t("squad.placeholder")}
                     className={clsx(
                       "font-mono text-[13px]",
                       screen && !narrow ? "h-full min-h-0! resize-none" : "min-h-24",
@@ -477,15 +459,15 @@ export function SetupForm({
         {step > 0 ? (
           <Button variant="ghost" onClick={() => go(step - 1)} disabled={kickoff}>
             <ArrowLeftIcon size={16} />
-            Back
+            {t("back")}
           </Button>
         ) : onLeave ? (
           <Button variant="ghost" onClick={onLeave}>
             <ArrowLeftIcon size={16} />
-            {leaveLabel ?? "Back"}
+            {leaveLabel ?? t("back")}
           </Button>
         ) : (
-          <span />
+          (start ?? <span />)
         )}
         <div className="ml-auto flex items-center gap-2">
           {(step === 1 || step === 3) && !(step === 1 && d.crest) && (
@@ -494,7 +476,7 @@ export function SetupForm({
               disabled={kickoff}
               onClick={() => (last ? finish() : go(step + 1))}
             >
-              Skip
+              {t("skip")}
             </Button>
           )}
           <Button
@@ -506,10 +488,10 @@ export function SetupForm({
             {last ? (
               <>
                 <CheckIcon size={16} weight="bold" />
-                Open the studio
+                {t("open")}
               </>
             ) : (
-              "Continue"
+              t("continue")
             )}
           </Button>
         </div>
@@ -519,7 +501,7 @@ export function SetupForm({
 
   if (!screen) {
     return (
-      <Window title="Club setup" right={<Progress step={step} />} className="w-full">
+      <Window title={t("title")} right={<Progress step={step} />} className="w-full">
         {form}
       </Window>
     );
@@ -535,7 +517,7 @@ export function SetupForm({
     >
       <div className="flex shrink-0 items-center justify-between">
         <span className="font-[family-name:var(--font-dots)] text-[22px] leading-none font-bold tracking-wider text-card">
-          CLUB SETUP
+          {t("screenTitle")}
         </span>
         <Progress step={step} />
       </div>

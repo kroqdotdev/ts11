@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useFormatter, useTranslations } from "next-intl";
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { Graphic, pitchLayout } from "@/components/graphics/Graphic";
 import { placedStarters } from "@/components/graphics/selection";
@@ -9,9 +10,10 @@ import { FORMATS } from "@/components/graphics/theme";
 import { GRAPHIC_NODE_ID } from "@/lib/export";
 import { displayName } from "@/lib/format";
 import { postIssues } from "@/lib/issues";
-import { describeSamples, withSamples } from "@/lib/sample";
+import { withSamples, type SampleNote } from "@/lib/sample";
 import { useActiveTeam, useStudio } from "@/lib/store";
 import { fixIssue } from "./fixIssue";
+import { useIssueText } from "./words";
 
 /** Room kept above the graphic for the sample tag, so the tag never covers the artwork. */
 const TAG_H = 30;
@@ -53,7 +55,7 @@ export function Stage({ exportable = true }: { exportable?: boolean }) {
     <div ref={ref} className="relative grid size-full place-items-center">
       {scale > 0 && (
         <div className="flex flex-col items-start">
-          {sampled && <SampleTag text={describeSamples(sample.filled)} width={shownW} />}
+          {sampled && <SampleTag filled={sample.filled} width={shownW} />}
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div
               key={`${design.format}`}
@@ -106,20 +108,26 @@ export function Stage({ exportable = true }: { exportable?: boolean }) {
  * Sits on top of the frame like a file tab, outside the artwork: says the preview
  * borrows example content and that the PNG won't include it.
  */
-function SampleTag({ text, width }: { text: string; width: number }) {
+function SampleTag({ filled, width }: { filled: SampleNote[]; width: number }) {
+  const t = useTranslations("studio.stage");
+  const format = useFormatter();
+  const what = format.list(
+    filled.map((f) => t(`samples.${f}`)),
+    { type: "conjunction" },
+  );
   const roomy = width >= 300;
-  const full = `Example ${text}. Not exported.`;
+  const full = t("sampleNote", { what });
   return (
     <div
       role="note"
-      aria-label={`Sample preview: example ${text}. Not exported.`}
+      aria-label={t("sampleLabel", { what })}
       title={full}
       className="mb-1.5 flex h-6 max-w-full items-center gap-2 overflow-hidden rounded-[3px] border-2 border-card-ink bg-card pr-2 pl-1.5 text-card-ink shadow-[2px_2px_0_var(--card-ink)]"
       style={{ maxWidth: width }}
     >
-      <span className="font-signage text-[17px] leading-none">Sample</span>
+      <span className="font-signage text-[17px] leading-none">{t("sample")}</span>
       <span className="truncate text-[11.5px] leading-none font-medium">
-        {roomy ? full : "Not exported."}
+        {roomy ? full : t("notExported")}
       </span>
     </div>
   );
@@ -129,6 +137,8 @@ function SampleTag({ text, width }: { text: string; width: number }) {
 export function IssuesBar() {
   const team = useActiveTeam();
   const design = useStudio((s) => s.design);
+  const t = useTranslations("studio");
+  const issueText = useIssueText();
   const issues = postIssues(team, design);
   if (issues.length === 0) return null;
   const [first, ...rest] = issues;
@@ -142,12 +152,12 @@ export function IssuesBar() {
         className={clsx("size-2.5 shrink-0", first.soft ? "bg-card" : "bg-danger")}
       />
       <span className="font-signage text-[18px] leading-none whitespace-nowrap">
-        Before you post
+        {t("export.beforePost")}
       </span>
-      <span className="min-w-0 truncate">{first.message}</span>
+      <span className="min-w-0 truncate">{issueText(first)}</span>
       {rest.length > 0 && (
-        <span className="shrink-0 text-ink-soft" title={rest.map((i) => i.message).join(", ")}>
-          +{rest.length} more
+        <span className="shrink-0 text-ink-soft" title={rest.map(issueText).join(", ")}>
+          {t("stage.more", { count: rest.length })}
         </span>
       )}
       <button
@@ -155,7 +165,7 @@ export function IssuesBar() {
         onClick={() => fixIssue(first)}
         className="shrink-0 lofi-press rounded-[3px] border-2 border-card-ink bg-card px-2.5 py-1 text-[12px] font-semibold text-card-ink shadow-[2px_2px_0_var(--card-ink)]"
       >
-        {first.soft ? "Check" : "Fix it"}
+        {first.soft ? t("export.check") : t("export.fixIt")}
       </button>
     </div>
   );
@@ -169,6 +179,7 @@ function PitchHandles({ scale }: { scale: number }) {
   const team = useActiveTeam();
   const design = useStudio((s) => s.design);
   const setOverride = useStudio((s) => s.setOverride);
+  const t = useTranslations("studio.stage");
   // Each look draws its pitch in its own place (and Story shifts it below the safe zone).
   const { rect, token: native } = pitchLayout(team, design);
   const size = native * scale;
@@ -295,7 +306,9 @@ function PitchHandles({ scale }: { scale: number }) {
         <button
           key={p.slot.index}
           type="button"
-          aria-label={`Move ${p.player ? displayName(p.player, "full") : "empty position"}. Drag, or use the arrow keys.`}
+          aria-label={t("move", {
+            name: p.player ? displayName(p.player, "full") : t("emptyPosition"),
+          })}
           onPointerDown={(e) => onPointerDown(e, p.slot.index, p.x, p.y)}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}

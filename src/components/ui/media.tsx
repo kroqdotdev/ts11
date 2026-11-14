@@ -3,6 +3,7 @@
 import { Popover } from "@base-ui/react/popover";
 import { ImageSquareIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { HexColorPicker } from "react-colorful";
 import { toast } from "sonner";
@@ -13,7 +14,7 @@ import {
   removeCrestBackground,
   type CrestBackground,
 } from "@/lib/crest";
-import { readImage, type ImagePurpose } from "@/lib/image";
+import { ImageError, readImage, type ImagePurpose } from "@/lib/image";
 import { Button } from "./controls";
 
 const SWATCHES = [
@@ -48,6 +49,7 @@ export function ColorField({
     setDraft(value);
   }
   const id = useId();
+  const t = useTranslations("ui");
 
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
@@ -57,7 +59,7 @@ export function ColorField({
       <div className="flex h-10 items-stretch rounded-[3px] border-2 border-ink/30 bg-paper transition-[border-color,box-shadow] focus-within:border-ink focus-within:shadow-[3px_3px_0_var(--card)] hover:border-ink/60">
         <Popover.Root>
           <Popover.Trigger
-            aria-label={`Pick ${label.toLowerCase()}`}
+            aria-label={t("color.pick", { label: label.toLowerCase() })}
             className="m-1 w-8 shrink-0 rounded-[2px] border-2 border-ink/80"
             style={{ background: value }}
           />
@@ -124,6 +126,7 @@ export function ImageField({
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const id = useId();
+  const t = useTranslations("ui.image");
 
   async function take(file: File | undefined) {
     if (!file) return;
@@ -131,7 +134,7 @@ export function ImageField({
     try {
       onChange(await readImage(file, purpose));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not use that image.");
+      toast.error(err instanceof ImageError ? t(err.code) : t("failed"));
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
@@ -186,13 +189,13 @@ export function ImageField({
           />
           <Button onClick={() => input.current?.click()} disabled={busy}>
             <UploadSimpleIcon size={16} />
-            {value ? "Replace" : "Upload"}
+            {value ? t("replace") : t("upload")}
           </Button>
           {value && (
             <Button
               variant="danger"
               size="icon"
-              aria-label={`Remove ${label.toLowerCase()}`}
+              aria-label={t("remove", { label: label.toLowerCase() })}
               onClick={() => onChange(null)}
             >
               <TrashIcon size={16} />
@@ -240,10 +243,11 @@ export function CrestField({
 }) {
   const bg = useCrestBackground(value);
   const [busy, setBusy] = useState(false);
+  const t = useTranslations("ui.crest");
   return (
     <div className="flex flex-col gap-2">
       <ImageField
-        label="Crest"
+        label={t("label")}
         hint={hint}
         value={value}
         purpose="crest"
@@ -263,11 +267,7 @@ export function CrestField({
             className="size-5 shrink-0 rounded-[2px] border-2 border-card-ink"
             style={{ background: bg.color }}
           />
-          <span className="min-w-0 flex-1">
-            {bg.light ? "This crest is on a white square" : "This crest is on a solid square"}.
-            Graphics put it on a neat plate, or remove the background to place it straight on the
-            colours.
-          </span>
+          <span className="min-w-0 flex-1">{bg.light ? t("onWhite") : t("onSolid")}</span>
           <Button
             size="sm"
             disabled={busy}
@@ -275,15 +275,15 @@ export function CrestField({
               setBusy(true);
               try {
                 onChange(await removeCrestBackground(value, bg), "transparent");
-                toast.success("Background removed");
+                toast.success(t("removed"));
               } catch {
-                toast.error("Could not remove the background. Try a PNG with a transparent one.");
+                toast.error(t("removeFailed"));
               } finally {
                 setBusy(false);
               }
             }}
           >
-            Remove {bg.light ? "white " : ""}background
+            {bg.light ? t("removeWhite") : t("remove")}
           </Button>
         </div>
       )}

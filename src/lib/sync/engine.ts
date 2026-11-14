@@ -3,7 +3,7 @@
 import { flushStorage, useStudio } from "@/lib/store";
 import type { Design, Team } from "@/lib/types";
 import { applyRemote, emptyMeta, planLink, type RemoteClub, type SyncMeta } from "./merge";
-import { useSyncState } from "./state";
+import { useSyncState, type SyncProblem } from "./state";
 import { uploadInlineImages, UploadBlocked } from "./upload";
 
 /**
@@ -90,11 +90,12 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-const REASONS: Record<string, string> = {
-  "too-large": "A club is too big to save. Remove some players or images from it.",
-  "inline-image": "An image couldn't be uploaded, so that club wasn't saved.",
-  "too-many": "Your account has the most clubs it can hold (50). Delete one to save a new one.",
-  "bad-data": "A club couldn't be read and wasn't saved.",
+/** The server's reasons for refusing a club, as the reasons the sync chip explains. */
+const REASONS: Record<string, SyncProblem["reason"]> = {
+  "too-large": "clubTooLarge",
+  "inline-image": "inlineImage",
+  "too-many": "tooMany",
+  "bad-data": "badData",
 };
 
 let current: { userId: string; push: () => Promise<void> } | null = null;
@@ -341,7 +342,7 @@ export function startSync(userId: string): () => void {
     save();
     retry = 0;
     if (res.rejected.length) {
-      ui({ status: "blocked", detail: REASONS[res.rejected[0].reason] ?? REASONS["bad-data"] });
+      ui({ status: "blocked", detail: { reason: REASONS[res.rejected[0].reason] ?? "badData" } });
     } else if (!conflict) {
       ui({ status: "saved", detail: null, lastSavedAt: Date.now() });
     }
@@ -357,14 +358,14 @@ export function startSync(userId: string): () => void {
       } while (again && !stopped && ++rounds < 5);
     } catch (e) {
       if (e instanceof UploadBlocked) {
-        ui({ status: "blocked", detail: e.message });
+        ui({ status: "blocked", detail: e.problem });
         return;
       }
       const err = e as Error & { status?: number; code?: string };
       if (err.status === 401) ui({ status: "off" });
       else if (err.code === "unverified") ui({ status: "unverified" });
       else {
-        ui({ status: "offline", detail: err.message });
+        ui({ status: "offline", detail: null });
         schedule(RETRY_MS[Math.min(retry++, RETRY_MS.length - 1)]);
       }
     }
@@ -454,7 +455,7 @@ export function startSync(userId: string): () => void {
       if (err.code === "unverified") ui({ status: "unverified" });
       else if (err.status === 401) ui({ status: "off" });
       else {
-        ui({ status: "offline", detail: err.message });
+        ui({ status: "offline", detail: null });
         setTimeout(() => void boot(attempt + 1), RETRY_MS[Math.min(attempt, RETRY_MS.length - 1)]);
       }
     }

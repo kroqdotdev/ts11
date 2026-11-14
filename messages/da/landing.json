@@ -1,0 +1,104 @@
+{
+  "cta": "Lav dit holdkort",
+  "openClub": "Åbn {name}",
+  "wordmark": "{app} forside",
+  "hero": {
+    "title": "Dit hold i klubbens farver.",
+    "lead": "Gratis kampgrafik til din klub: holdopstilling, kampdag og slutresultat. Vælg en spilledragt, skriv navnene og læg det op inden kampstart.",
+    "tryExample": "Prøv eksempelklubben",
+    "backToStands": "Tilbage til tribunen",
+    "kitPicker": "Prøv en spilledragt",
+    "ownKit": "Din spilledragt",
+    "ownKitLabel": "{club}: din spilledragt",
+    "tryKit": "Prøv {kit}",
+    "clubKit": "{club}: {kit}",
+    "ticker": "GRATIS KAMPGRAFIK TIL DIN KLUB - SKIFT SPILLEDRAGT OG SE PUBLIKUM SKIFTE FARVE",
+    "welcomeBack": "VELKOMMEN TILBAGE, {club}",
+    "boards": {
+      "free": "ALTID GRATIS",
+      "watermark": "INTET VANDMÆRKE",
+      "signUp": "UDEN KONTO"
+    }
+  },
+  "reel": {
+    "title": "Ni grafikker, halvfems minutter.",
+    "lead": "Fra aftenen før til mandagen efter. Hver af dem bruger din trup, dine farver og dit klublogo, så det tager et minut og ikke en hel aften.",
+    "earlier": "Tidligere grafikker",
+    "later": "Senere grafikker",
+    "clock": {
+      "dayBefore": "-1 DAG",
+      "hourBefore": "-1 TIME",
+      "monday": "MAN"
+    },
+    "fixture": {
+      "file": "kampdag.png",
+      "title": "Kampdag",
+      "body": "Modstander, kampstart og bane."
+    },
+    "lineup": {
+      "file": "startopstilling.png",
+      "title": "Startopstilling",
+      "body": "Numre, navne og bænken."
+    },
+    "pitch": {
+      "file": "dagens-hold.png",
+      "title": "Dagens hold",
+      "body": "Din formation, trukket på plads."
+    },
+    "goal": {
+      "file": "mål.png",
+      "title": "Mål",
+      "body": "Målscorer, minut og stilling."
+    },
+    "halftime": {
+      "file": "pause.png",
+      "title": "Pause",
+      "body": "Stillingen ved pausen."
+    },
+    "subs": {
+      "file": "udskiftninger.png",
+      "title": "Udskiftninger",
+      "body": "Hvem kom ind, og hvem gik ud."
+    },
+    "result": {
+      "file": "slutresultat.png",
+      "title": "Slutresultat",
+      "body": "Slutresultatet og alle målscorerne."
+    },
+    "motm": {
+      "file": "kampens-spiller.png",
+      "title": "Kampens spiller",
+      "body": "Dagens bedste i projektørlyset."
+    },
+    "fixtures": {
+      "file": "kampprogram.png",
+      "title": "Kampprogram",
+      "body": "De næste fire kampe eller resultaterne."
+    }
+  },
+  "setup": {
+    "title": "Sæt klubben op én gang. Klar før kampstart.",
+    "lead": "Navn, klublogo, farver og trup – og stadionet fyldes op, mens du skriver. Derefter er alle grafikkerne klar. Næste uge vælger du bare holdet og lægger det op."
+  },
+  "sheet": {
+    "title": "Holdkort",
+    "price": "Pris",
+    "priceValue": "Gratis, alle grafikker",
+    "signUp": "Konto",
+    "signUpValue": "Ikke nødvendig",
+    "watermark": "Vandmærke",
+    "watermarkValue": "Intet",
+    "kept": "Din trup gemmes",
+    "keptValue": "På denne enhed",
+    "exports": "Gemmes som",
+    "exportsValue": "PNG, klar til alle sociale medier",
+    "signed": "Underskrevet af alle holdledere, der nogensinde har siddet med et regneark ved midnat."
+  },
+  "footer": {
+    "tagline": "Gratis kampgrafik til klubber i breddefodbolden.",
+    "nav": "Mere",
+    "source": "Kildekode",
+    "privacy": "Privatliv",
+    "account": "Din konto"
+  }
+}

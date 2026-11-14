@@ -1,5 +1,8 @@
 export type Position = "GK" | "DF" | "MF" | "FW";
 
+/** A language the app and the graphics come in. */
+export type Language = "en" | "da";
+
 export interface Player {
   id: string;
   name: string;
@@ -106,6 +109,11 @@ export interface Team {
    */
   crestKind?: "opaque" | "transparent";
   colors: Colors;
+  /**
+   * The language printed on this club's graphics ("Starting XI" or "Startopstilling"),
+   * set from the interface language when the club is made. Missing on old saves: English.
+   */
+  language?: Language;
   players: Player[];
   lineup: Lineup;
   match: Match;

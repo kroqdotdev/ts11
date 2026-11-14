@@ -15,6 +15,24 @@ import { create } from "zustand";
 export type SyncStatus =
   "off" | "unverified" | "loading" | "merging" | "saving" | "saved" | "offline" | "blocked";
 
+/**
+ * Why a save was refused, as a key under `sync.reason` (the chip puts it into words).
+ * `max` is the limit in bytes for imageTooLarge, in pixels for imageTooBig.
+ */
+export interface SyncProblem {
+  reason:
+    | "refused"
+    | "clubTooLarge"
+    | "inlineImage"
+    | "tooMany"
+    | "badData"
+    | "quota"
+    | "imageTooLarge"
+    | "imageTooBig"
+    | "notAnImage";
+  max?: number;
+}
+
 /** Shown when this browser has clubs the account doesn't, the first time they meet. */
 export interface MergePrompt {
   localNames: string[];
@@ -23,7 +41,7 @@ export interface MergePrompt {
 
 interface SyncState {
   status: SyncStatus;
-  detail: string | null;
+  detail: SyncProblem | null;
   lastSavedAt: number | null;
   merge: MergePrompt | null;
   /** Called by the merge dialog: true adds this browser's clubs, false drops them. */

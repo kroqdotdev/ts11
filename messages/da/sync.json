@@ -1,0 +1,38 @@
+{
+  "chip": {
+    "loading": "Henter…",
+    "merging": "Vælg, hvad du vil beholde",
+    "saving": "Gemmer…",
+    "saved": "Gemt",
+    "offline": "Offline, prøver igen"
+  },
+  "notSaved": {
+    "label": "Ikke gemt",
+    "body": "{reason} Alt er stadig i denne browser.",
+    "link": "Gå til lagerplads og konto"
+  },
+  "reason": {
+    "refused": "Din konto afviste den seneste ændring.",
+    "clubTooLarge": "En klub er for stor til at blive gemt. Fjern nogle spillere eller billeder fra den.",
+    "inlineImage": "Et billede kunne ikke uploades, så klubben blev ikke gemt.",
+    "tooMany": "Der er ikke plads til flere klubber på din konto (højst 50). Slet en for at gemme en ny.",
+    "badData": "En klub kunne ikke læses og blev ikke gemt.",
+    "quota": "Din lagerplads til billeder er fuld. Slet billeder, du ikke bruger mere, for at få plads.",
+    "imageTooLarge": "Billeder må højst fylde {size}.",
+    "imageTooBig": "Billeder må højst være {side} pixels på den længste side.",
+    "notAnImage": "Filen er ikke et billede, vi kan læse."
+  },
+  "merge": {
+    "title": "Tilføj klubberne fra denne browser?",
+    "description": "{count, plural, one {Denne browser har en klub, som ikke er på din konto endnu.} other {Denne browser har # klubber, som ikke er på din konto endnu.}}",
+    "inBrowser": "I denne browser",
+    "inAccount": "På din konto",
+    "noClubs": "Ingen klubber endnu",
+    "unnamedClub": "Klub uden navn",
+    "useAccount": "Brug kun min konto",
+    "add": "Tilføj til min konto",
+    "goBack": "Tilbage",
+    "remove": "Fjern fra denne browser",
+    "warning": "{count, plural, one {Klubben bliver fjernet fra denne browser og er ikke gemt nogen steder. Hent en backup fra holdmenuen først, hvis du kan få brug for den.} other {Klubberne bliver fjernet fra denne browser og er ikke gemt nogen steder. Hent en backup fra holdmenuen først, hvis du kan få brug for dem.}}"
+  }
+}

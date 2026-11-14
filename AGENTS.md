@@ -17,6 +17,8 @@ The short version for agents:
   `pnpm check:graphics` (needs `pnpm dev`); for accounts or sync, `pnpm test:e2e`.
 - Graphics are pure components at native pixel size and must pass the layout check. Never print
   placeholder text in a graphic.
+- All text comes in English and Danish (natural Danish, not translated-sounding): follow
+  [docs/i18n.md](docs/i18n.md). Links and routers come from `@/i18n/navigation`.
 - Keep the app chrome in the existing low-fi theme (tokens in `src/app/globals.css`, components in
   `src/components/ui/controls.tsx` and `src/components/lofi/`).
 - Accounts are optional: everything must keep working signed out.

@@ -1,10 +1,11 @@
 "use client";
 
 import { ArrowsClockwiseIcon, DownloadSimpleIcon } from "@phosphor-icons/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button, Dialog } from "@/components/ui/controls";
-import { DbuError, getDbuMatch, planFromDbuMatch, type DbuMatchPlan } from "@/lib/dbu";
+import { dbuErrorKey, getDbuMatch, planFromDbuMatch, type DbuMatchPlan } from "@/lib/dbu";
 import { useActiveTeam, useStudio } from "@/lib/store";
 import { Check } from "./Check";
 
@@ -12,8 +13,6 @@ type Load =
   | { state: "loading" }
   | { state: "failed"; message: string }
   | { state: "ready"; plan: DbuMatchPlan };
-
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * "Get from DBU" for the match on the graphics: shows what DBU's match page has (the
@@ -48,18 +47,15 @@ function MatchBody({
   const ref = team.match.dbu;
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [parts, setParts] = useState({ score: true, lineup: true, subs: true });
+  const t = useTranslations("dbu.match");
+  const tErrors = useTranslations("dbu.errors");
 
   useEffect(() => {
     if (!open || !ref) return;
     let live = true;
     getDbuMatch(ref).then(
       (page) => live && setLoad({ state: "ready", plan: planFromDbuMatch(team, page) }),
-      (e) =>
-        live &&
-        setLoad({
-          state: "failed",
-          message: e instanceof DbuError ? e.message : "Something went wrong. Try again.",
-        }),
+      (e) => live && setLoad({ state: "failed", message: tErrors(dbuErrorKey(e)) }),
     );
     return () => {
       live = false;
@@ -80,9 +76,9 @@ function MatchBody({
     subs: parts.subs && has.subs,
   };
   const replaces = [
-    chosen.score && team.match.goals.length > 0 && "goals",
-    chosen.lineup && team.lineup.starters.some(Boolean) && "line-up",
-    chosen.subs && team.match.subs.length > 0 && "substitutions",
+    chosen.score && team.match.goals.length > 0 && t("partGoals"),
+    chosen.lineup && team.lineup.starters.some(Boolean) && t("partLineup"),
+    chosen.subs && team.match.subs.length > 0 && t("partSubs"),
   ].filter(Boolean) as string[];
   const m = team.match;
 
@@ -90,14 +86,14 @@ function MatchBody({
     if (!plan) return;
     applyDbuMatch(plan, chosen);
     const done = [
-      chosen.lineup && "line-up",
-      chosen.score && "result",
-      chosen.subs && "substitutions",
-    ].filter(Boolean);
-    toast.success(`Filled in from DBU: ${done.join(", ")}`, {
+      chosen.lineup && t("partLineup"),
+      chosen.score && t("partResult"),
+      chosen.subs && t("partSubs"),
+    ].filter(Boolean) as string[];
+    toast.success(t("filled", { parts: done.join(", ") }), {
       description:
         chosen.lineup && plan.newPlayers.length
-          ? `${plural(plan.newPlayers.length, "player was", "players were")} added to the squad. Check their positions.`
+          ? t("playersAdded", { count: plan.newPlayers.length })
           : undefined,
     });
     onOpenChange(false);
@@ -107,25 +103,27 @@ function MatchBody({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Get from DBU"
-      description={`${m.isHome ? "Home" : "Away"} against ${m.opponent || "the opponent"}. DBU shows the team sheet (holdkort) once it's handed in, and goals and substitutions as they're reported.`}
+      title={t("title")}
+      description={t(m.isHome ? "introHome" : "introAway", {
+        opponent: m.opponent || t("theOpponent"),
+      })}
       footer={
         <>
-          <Button onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={() => onOpenChange(false)}>{t("cancel")}</Button>
           <Button
             variant="primary"
             onClick={apply}
             disabled={!plan || !(chosen.score || chosen.lineup || chosen.subs)}
           >
             <DownloadSimpleIcon size={14} weight="bold" />
-            Fill in
+            {t("fill")}
           </Button>
         </>
       }
     >
       {load.state === "loading" && (
         <p className="text-sm text-ink-soft" role="status">
-          Looking at DBU&apos;s page for the match…
+          {t("loading")}
         </p>
       )}
       {load.state === "failed" && (
@@ -139,48 +137,54 @@ function MatchBody({
             checked={chosen.lineup}
             disabled={!has.lineup}
             onChange={(lineup) => setParts((p) => ({ ...p, lineup }))}
-            title="Line-up from the team sheet"
+            title={t("lineup")}
             detail={
               plan.sheet
-                ? `${plural(plan.sheet.starters.length, "starter", "starters")}, ${plural(plan.sheet.bench.length, "on the bench", "on the bench")}.${
-                    plan.newPlayers.length
-                      ? ` ${plural(plan.newPlayers.length, "isn't", "aren't")} in your squad yet and will be added.`
-                      : ""
-                  } The team sheet has no positions, so check them after.`
-                : "DBU doesn't show your team sheet for this match (yet)."
+                ? [
+                    t("lineupDetail", {
+                      starters: plan.sheet.starters.length,
+                      bench: plan.sheet.bench.length,
+                    }),
+                    plan.newPlayers.length > 0 && t("lineupNew", { count: plan.newPlayers.length }),
+                    t("lineupPositions"),
+                  ]
+                    .filter(Boolean)
+                    .join(" ")
+                : t("lineupNone")
             }
           />
           <Check
             checked={chosen.score}
             disabled={!has.score}
             onChange={(score) => setParts((p) => ({ ...p, score }))}
-            title="Score and goals"
+            title={t("score")}
             detail={
               !has.score
-                ? "No score on DBU yet."
-                : `${plan.score ? `${plan.score.us}-${plan.score.them}${plan.finished ? "" : " so far"}` : "No score yet"}, ${plural(plan.goals.length, "goal", "goals")} with ${plan.goals.length === 1 ? "its" : "their"} scorer${plan.goals.length === 1 ? "" : "s"}.${
-                    plan.score && !plan.goalsAddUp
-                      ? " DBU's timeline doesn't have every goal, so the score is typed in as DBU has it."
-                      : ""
-                  }`
+                ? t("scoreNone")
+                : [
+                    t("scoreDetail", {
+                      score: plan.score ? `${plan.score.us}-${plan.score.them}` : "–",
+                      live: plan.finished ? "no" : "yes",
+                      count: plan.goals.length,
+                    }),
+                    plan.score && !plan.goalsAddUp && t("scoreTyped"),
+                  ]
+                    .filter(Boolean)
+                    .join(" ")
             }
           />
           <Check
             checked={chosen.subs}
             disabled={!has.subs}
             onChange={(subs) => setParts((p) => ({ ...p, subs }))}
-            title="Substitutions"
-            detail={
-              has.subs
-                ? `${plural(plan.subs.length, "substitution", "substitutions")}.`
-                : "None reported on DBU."
-            }
+            title={t("subs")}
+            detail={has.subs ? t("subsDetail", { count: plan.subs.length }) : t("subsNone")}
           />
         </div>
       )}
       {replaces.length > 0 && (
         <p className="text-xs leading-snug text-ink-soft">
-          This replaces the {replaces.join(" and ")} you have for this match now.
+          {t("replaces", { parts: replaces.join(", ") })}
         </p>
       )}
     </Dialog>
@@ -188,15 +192,23 @@ function MatchBody({
 }
 
 /** Opens "Get from DBU" for a match set from an imported fixture; nothing otherwise. */
-export function DbuMatchButton({ label, className }: { label: string; className?: string }) {
+export function DbuMatchButton({
+  kind,
+  className,
+}: {
+  /** "match" in the Match panel (line-up and result), "lineup" in the Line-up panel. */
+  kind: "match" | "lineup";
+  className?: string;
+}) {
   const team = useActiveTeam();
   const [open, setOpen] = useState(false);
+  const t = useTranslations("dbu.match");
   if (!team.match.dbu) return null;
   return (
     <>
       <Button size="sm" className={className} onClick={() => setOpen(true)}>
         <ArrowsClockwiseIcon size={14} />
-        {label}
+        {kind === "match" ? t("buttonMatch") : t("buttonLineup")}
       </Button>
       <DbuMatchDialog open={open} onOpenChange={setOpen} />
     </>

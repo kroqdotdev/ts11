@@ -57,7 +57,8 @@ export type LinkPlan = Handover &
       }
   );
 
-const label = (t: Team) => t.name.trim() || "Unnamed club";
+/** The club's name as typed; the dialog names a nameless club in its own language. */
+const label = (t: Team) => t.name.trim();
 
 /**
  * The first time this browser meets an account. `owner` is the account the local

@@ -7,11 +7,13 @@ import {
   SignOutIcon,
   WarningIcon,
 } from "@phosphor-icons/react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useEffect, useState, type ReactNode } from "react";
+import { LocaleSwitch } from "@/components/i18n/LocaleSwitch";
 import { Window } from "@/components/lofi/Window";
 import { Button } from "@/components/ui/controls";
 import { Wordmark } from "@/components/Wordmark";
+import { Link } from "@/i18n/navigation";
 import { authClient, useSession } from "@/lib/auth-client";
 import { signOutWithToast } from "./AccountButton";
 import { AuthDialog, ResendButton } from "./AuthDialog";
@@ -43,6 +45,7 @@ export function AccountPage({ signedIn }: { signedIn?: boolean }) {
   // Until the browser knows, trust the server; after that, follow sign-in and sign-out here.
   const known = !isPending || !!user;
   const isIn = known ? !!user : signedIn;
+  const t = useTranslations("account.page");
 
   let body: ReactNode;
   if (isIn === false) body = <SignedOut />;
@@ -54,16 +57,19 @@ export function AccountPage({ signedIn }: { signedIn?: boolean }) {
     <main className="pixel-stage flex min-h-dvh flex-col">
       <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b-2 border-card-ink bg-grass-deep px-4 text-chalk lg:px-8">
         <Wordmark className="text-[24px]" />
-        <Link
-          href="/studio"
-          className="lofi-press rounded-[4px] border-2 border-card-ink bg-paper px-3 py-1.5 text-sm font-medium text-ink shadow-[3px_3px_0_var(--card-ink)]"
-        >
-          Back to the studio
-        </Link>
+        <div className="flex min-w-0 items-center gap-1 sm:gap-3">
+          <LocaleSwitch tone="chalk" />
+          <Link
+            href="/studio"
+            className="lofi-press rounded-[4px] border-2 border-card-ink bg-paper px-3 py-1.5 text-sm font-medium whitespace-nowrap text-ink shadow-[3px_3px_0_var(--card-ink)]"
+          >
+            {t("back")}
+          </Link>
+        </div>
       </header>
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pt-8 pb-16 lg:px-8 lg:pt-12">
         <h1 className="font-signage text-[40px] leading-none text-chalk sm:text-[52px]">
-          Storage and account
+          {t("title")}
         </h1>
         {body}
       </div>
@@ -86,22 +92,20 @@ function Columns({ main, side }: { main: ReactNode; side: ReactNode }) {
 
 function SignedOut() {
   const show = useAuthDialog((s) => s.show);
+  const t = useTranslations("account.page");
   return (
     <Window
-      title="Sign in to see your account"
+      title={t("signedOutTitle")}
       className="w-full max-w-xl"
       bodyClassName="flex flex-col gap-5 p-4 sm:p-5"
     >
-      <p className="text-sm leading-relaxed text-ink-soft">
-        Your storage, uploaded images and account settings are here once you sign in. Without an
-        account, your clubs stay in this browser.
-      </p>
+      <p className="text-sm leading-relaxed text-ink-soft">{t("signedOutBody")}</p>
       <div className="flex flex-wrap gap-3">
         <Button variant="primary" onClick={() => show("signin")}>
           <SignInIcon size={16} weight="bold" aria-hidden />
-          Sign in
+          {t("signIn")}
         </Button>
-        <Button onClick={() => show("signup")}>Create account</Button>
+        <Button onClick={() => show("signup")}>{t("signUp")}</Button>
       </div>
     </Window>
   );
@@ -127,11 +131,12 @@ function useProviders(userId: string): string[] | null {
 
 function Unverified({ user }: { user: User }) {
   const providers = useProviders(user.id);
+  const t = useTranslations("account.page");
   return (
     <Columns
       main={
         <Window
-          title="Confirm your email"
+          title={t("confirmTitle")}
           bodyClassName="flex flex-col items-start gap-4 p-4 sm:p-5"
         >
           <div className="flex items-start gap-3">
@@ -142,9 +147,10 @@ function Unverified({ user }: { user: User }) {
               <EnvelopeSimpleIcon size={18} weight="bold" />
             </span>
             <p className="text-sm leading-relaxed text-ink">
-              We sent a link to <EmailText email={user.email} className="font-semibold" />. Open it
-              to confirm your email; your storage and images show up here after that. Until then,
-              your clubs stay in this browser.
+              {t.rich("confirmBody", {
+                email: user.email,
+                strong: () => <EmailText email={user.email} className="font-semibold" />,
+              })}
             </p>
           </div>
           <ResendButton email={user.email} />
@@ -167,6 +173,7 @@ function SignedIn({ user }: { user: User }) {
   const providers = useProviders(user.id);
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [attempt, setAttempt] = useState(0);
+  const t = useTranslations("account.page");
 
   useEffect(() => {
     let live = true;
@@ -200,18 +207,18 @@ function SignedIn({ user }: { user: User }) {
   if (load.state === "loading") main = <StorageSkeleton />;
   else if (load.state === "error") {
     main = (
-      <Window title="Storage" bodyClassName="flex flex-col items-start gap-4 p-4 sm:p-5">
+      <Window title={t("storage")} bodyClassName="flex flex-col items-start gap-4 p-4 sm:p-5">
         <p role="alert" className="flex items-start gap-2 text-sm font-medium text-danger">
           <WarningIcon size={18} weight="bold" aria-hidden className="mt-px shrink-0" />
-          Your storage couldn&apos;t be loaded.
+          {t("storageError")}
         </p>
-        <Button onClick={retry}>Try again</Button>
+        <Button onClick={retry}>{t("retry")}</Button>
       </Window>
     );
   } else {
     main = (
       <>
-        <Window title="Storage" bodyClassName="p-4 sm:p-5">
+        <Window title={t("storage")} bodyClassName="p-4 sm:p-5">
           <StorageMeter
             used={load.data.used}
             limit={load.data.limit}
@@ -237,33 +244,34 @@ function SignedIn({ user }: { user: User }) {
   );
 }
 
-const PROVIDERS: Record<string, { label: string; icon: ReactNode }> = {
-  credential: {
-    label: "Email and password",
-    icon: <EnvelopeSimpleIcon size={15} aria-hidden />,
-  },
-  google: { label: "Google", icon: <GoogleLogoIcon size={15} aria-hidden /> },
+const PROVIDER_ICONS: Record<string, ReactNode> = {
+  credential: <EnvelopeSimpleIcon size={15} aria-hidden />,
+  google: <GoogleLogoIcon size={15} aria-hidden />,
 };
 
 function AccountWindow({ user, providers }: { user: User; providers: string[] | null }) {
   const [busy, setBusy] = useState(false);
+  const t = useTranslations("account.page");
+  const tOut = useTranslations("account.signOut");
+  const providerLabel = (p: string) =>
+    p === "credential" ? t("providerPassword") : p === "google" ? "Google" : p;
   return (
-    <Window title="Account" bodyClassName="flex flex-col items-start gap-4 p-4 sm:p-5">
+    <Window title={t("account")} bodyClassName="flex flex-col items-start gap-4 p-4 sm:p-5">
       <dl className="flex w-full min-w-0 flex-col gap-3 text-sm">
         {user.name && (
           <div className="flex min-w-0 flex-col gap-0.5">
-            <dt className="text-xs text-ink-soft">Name</dt>
+            <dt className="text-xs text-ink-soft">{t("name")}</dt>
             <dd className="font-semibold break-words text-ink">{user.name}</dd>
           </div>
         )}
         <div className="flex min-w-0 flex-col gap-0.5">
-          <dt className="text-xs text-ink-soft">Email</dt>
+          <dt className="text-xs text-ink-soft">{t("email")}</dt>
           <dd className="font-semibold text-ink">
             <EmailText email={user.email} />
           </dd>
         </div>
         <div className="flex min-w-0 flex-col gap-1.5">
-          <dt className="text-xs text-ink-soft">Signs in with</dt>
+          <dt className="text-xs text-ink-soft">{t("signsInWith")}</dt>
           <dd className="flex flex-wrap gap-2">
             {providers === null ? (
               <span aria-busy className="h-7 w-36 rounded-[2px] bg-well" />
@@ -273,8 +281,8 @@ function AccountWindow({ user, providers }: { user: User; providers: string[] | 
                   key={p}
                   className="inline-flex h-7 items-center gap-1.5 rounded-[2px] border-2 border-ink/25 px-2 text-[13px] text-ink"
                 >
-                  {PROVIDERS[p]?.icon}
-                  {PROVIDERS[p]?.label ?? p}
+                  {PROVIDER_ICONS[p]}
+                  {providerLabel(p)}
                 </span>
               ))
             )}
@@ -285,12 +293,12 @@ function AccountWindow({ user, providers }: { user: User; providers: string[] | 
         disabled={busy}
         onClick={async () => {
           setBusy(true);
-          const ok = await signOutWithToast(false);
+          const ok = await signOutWithToast(false, tOut);
           if (!ok) setBusy(false);
         }}
       >
         <SignOutIcon size={16} weight="bold" aria-hidden />
-        {busy ? "Signing out…" : "Sign out"}
+        {busy ? t("signingOut") : t("signOut")}
       </Button>
     </Window>
   );
@@ -302,18 +310,19 @@ function Bar({ className }: { className: string }) {
 
 /** Blank windows the size of the real ones, so nothing jumps when they fill in. */
 function StorageSkeleton() {
+  const t = useTranslations("account.page");
   return (
     <>
-      <Window title="Storage" bodyClassName="flex flex-col gap-4 p-4 sm:p-5">
+      <Window title={t("storage")} bodyClassName="flex flex-col gap-4 p-4 sm:p-5">
         <div aria-busy="true" className="flex flex-col gap-4">
-          <span className="sr-only">Loading your storage</span>
+          <span className="sr-only">{t("loadingStorage")}</span>
           <Bar className="h-11 w-40" />
           <Bar className="h-4 w-32" />
           <Bar className="h-4 w-full" />
           <Bar className="h-10 w-full max-w-md" />
         </div>
       </Window>
-      <Window title="Your images" bodyClassName="p-4 sm:p-5">
+      <Window title={t("images")} bodyClassName="p-4 sm:p-5">
         <div aria-hidden className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 3 }, (_, i) => (
             <Bar key={i} className="aspect-[4/5]" />
@@ -325,13 +334,14 @@ function StorageSkeleton() {
 }
 
 function Skeleton() {
+  const t = useTranslations("account.page");
   return (
     <Columns
       main={<StorageSkeleton />}
       side={
-        <Window title="Account" bodyClassName="flex flex-col gap-3 p-4 sm:p-5">
+        <Window title={t("account")} bodyClassName="flex flex-col gap-3 p-4 sm:p-5">
           <div aria-busy="true" className="flex flex-col gap-3">
-            <span className="sr-only">Loading your account</span>
+            <span className="sr-only">{t("loadingAccount")}</span>
             <Bar className="h-4 w-24" />
             <Bar className="h-4 w-48" />
             <Bar className="h-10 w-28" />

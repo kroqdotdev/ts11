@@ -2,30 +2,31 @@
 
 import { EnvelopeSimpleIcon, GoogleLogoIcon, SignInIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { create } from "zustand";
 import { Button, Dialog, Field, Segmented, TextInput } from "@/components/ui/controls";
+import { getPathname, Link, usePathname } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
 import { authClient } from "@/lib/auth-client";
+import { APP_NAME } from "@/lib/brand";
 import { useAuthDialog, type AuthMode } from "./authDialogStore";
 import { EmailText } from "./EmailText";
-import { authMessage, looksLikeEmail, type ErrorField } from "./messages";
+import { looksLikeEmail, useAuthMessage, type ErrorField } from "./messages";
 
 export { useAuthDialog };
 export type { AuthMode };
 
-/** Where Better Auth sends people after the confirmation link and after Google. */
-const VERIFIED_URL = "/studio?verified=1";
 const COOLDOWN_MS = 30_000;
 
-const TITLES: Record<AuthMode, string> = {
-  signin: "Sign in",
-  signup: "Create account",
-  reset: "Reset your password",
-  sent: "Check your inbox",
-};
+/**
+ * Where Better Auth sends people after the confirmation link, in the language of the
+ * page that asked. The server also reads the language from this link to write the
+ * email in it (see src/server/mail-templates.ts).
+ */
+const verifiedUrl = (locale: Locale) =>
+  getPathname({ href: { pathname: "/studio", query: { verified: "1" } }, locale });
 
 /**
  * The one sign-in dialog: sign in, create an account, ask for a reset link, and
@@ -35,16 +36,15 @@ export function AuthDialog() {
   const open = useAuthDialog((s) => s.open);
   const mode = useAuthDialog((s) => s.mode);
   const set = useAuthDialog((s) => s.set);
+  const t = useTranslations("account.dialog");
 
   return (
     <Dialog
       open={open}
       onOpenChange={(o) => set({ open: o })}
-      title={TITLES[mode]}
+      title={t(`title.${mode}`)}
       description={
-        mode === "signin" || mode === "signup"
-          ? "Save your clubs to an account and open them on any device, or keep using teamsheet11 without one."
-          : undefined
+        mode === "signin" || mode === "signup" ? t("intro", { app: APP_NAME }) : undefined
       }
     >
       {mode === "signin" || mode === "signup" ? (
@@ -63,6 +63,9 @@ function CredentialsForm({ mode }: { mode: "signin" | "signup" }) {
   const email = useAuthDialog((s) => s.email);
   const set = useAuthDialog((s) => s.set);
   const pathname = usePathname();
+  const locale = useLocale();
+  const t = useTranslations("account.dialog");
+  const { text, message } = useAuthMessage();
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState<"email" | "google" | null>(null);
@@ -73,17 +76,23 @@ function CredentialsForm({ mode }: { mode: "signin" | "signup" }) {
   async function google() {
     setError(null);
     setBusy("google");
-    // Back to where they were; the studio shows a "signed in" note.
-    const back = pathname === "/account" ? "/account" : "/studio?signedin=1";
+    // Back to where they were, in the same language; the studio shows a "signed in" note.
+    const back =
+      pathname === "/account"
+        ? getPathname({ href: "/account", locale })
+        : getPathname({ href: { pathname: "/studio", query: { signedin: "1" } }, locale });
     const { error } = await authClient.signIn.social({
       provider: "google",
       callbackURL: back,
-      errorCallbackURL: `${pathname || "/"}?signinerror=1`,
+      errorCallbackURL: getPathname({
+        href: { pathname: pathname || "/", query: { signinerror: "1" } },
+        locale,
+      }),
     });
     // On success the browser is already on its way to Google.
     if (error) {
       setBusy(null);
-      setError(authMessage(error));
+      setError(message(error));
     }
   }
 
@@ -91,15 +100,15 @@ function CredentialsForm({ mode }: { mode: "signin" | "signup" }) {
     e.preventDefault();
     const address = email.trim();
     if (!looksLikeEmail(address)) {
-      setError({ text: "Enter your email address, like name@example.org.", field: "email" });
+      setError({ text: text("enterEmail"), field: "email" });
       return;
     }
     if (signup && password.length < 8) {
-      setError({ text: "Use at least 8 characters.", field: "password" });
+      setError({ text: text("tooShort"), field: "password" });
       return;
     }
     if (!password) {
-      setError({ text: "Enter your password.", field: "password" });
+      setError({ text: text("enterPassword"), field: "password" });
       return;
     }
     setError(null);
@@ -109,12 +118,12 @@ function CredentialsForm({ mode }: { mode: "signin" | "signup" }) {
           email: address,
           password,
           name: name.trim(),
-          callbackURL: VERIFIED_URL,
+          callbackURL: verifiedUrl(locale),
         })
       : await authClient.signIn.email({ email: address, password });
     setBusy(null);
     if (error) {
-      setError(authMessage(error));
+      setError(message(error));
       return;
     }
     if (signup) {
@@ -123,7 +132,7 @@ function CredentialsForm({ mode }: { mode: "signin" | "signup" }) {
       return;
     }
     set({ open: false });
-    toast("Signed in", { description: address });
+    toast(t("signedIn"), { description: address });
   }
 
   const errorFor = (field: ErrorField) =>
@@ -137,32 +146,32 @@ function CredentialsForm({ mode }: { mode: "signin" | "signup" }) {
   return (
     <div className="flex flex-col gap-5">
       <Segmented
-        label="Sign in or create an account"
+        label={t("modeLabel")}
         value={mode}
         onChange={(m) => {
           setError(null);
           set({ mode: m });
         }}
         options={[
-          { value: "signin", label: "Sign in" },
-          { value: "signup", label: "Create account" },
+          { value: "signin", label: t("signin") },
+          { value: "signup", label: t("signup") },
         ]}
       />
 
       <Button onClick={google} disabled={busy !== null} className="w-full">
         <GoogleLogoIcon size={18} weight="bold" aria-hidden />
-        {busy === "google" ? "Opening Google…" : "Continue with Google"}
+        {busy === "google" ? t("googleBusy") : t("google")}
       </Button>
 
       <div className="flex items-center gap-3 text-xs text-ink-soft" aria-hidden>
         <span className="h-0.5 flex-1 bg-rule" />
-        or with email
+        {t("orEmail")}
         <span className="h-0.5 flex-1 bg-rule" />
       </div>
 
       <form noValidate onSubmit={submit} className="flex flex-col gap-4">
         {signup && (
-          <Field label="Your name" hint="Optional. Only used in emails to you." htmlFor={ids.name}>
+          <Field label={t("name")} hint={t("nameHint")} htmlFor={ids.name}>
             <TextInput
               id={ids.name}
               value={name}
@@ -172,7 +181,7 @@ function CredentialsForm({ mode }: { mode: "signin" | "signup" }) {
             />
           </Field>
         )}
-        <Field label="Email" htmlFor={ids.email}>
+        <Field label={t("email")} htmlFor={ids.email}>
           <TextInput
             id={ids.email}
             type="email"
@@ -188,8 +197,8 @@ function CredentialsForm({ mode }: { mode: "signin" | "signup" }) {
           {errorFor("email")}
         </Field>
         <Field
-          label="Password"
-          hint={signup && error?.field !== "password" ? "At least 8 characters." : undefined}
+          label={t("password")}
+          hint={signup && error?.field !== "password" ? t("passwordHint") : undefined}
           htmlFor={ids.password}
         >
           <TextInput
@@ -215,18 +224,18 @@ function CredentialsForm({ mode }: { mode: "signin" | "signup" }) {
               onClick={() => set({ mode: "reset" })}
               className="text-[13px] font-medium text-ink underline underline-offset-4 hover:text-ink-soft"
             >
-              Forgot your password?
+              {t("forgot")}
             </button>
           )}
           <Button type="submit" variant="primary" disabled={busy !== null}>
             {!signup && <SignInIcon size={16} weight="bold" aria-hidden />}
             {busy === "email"
               ? signup
-                ? "Creating account…"
-                : "Signing in…"
+                ? t("creating")
+                : t("signingIn")
               : signup
-                ? "Create account"
-                : "Sign in"}
+                ? t("signup")
+                : t("signin")}
           </Button>
         </div>
       </form>
@@ -244,25 +253,30 @@ function ResetRequest() {
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const id = useId();
+  const locale = useLocale();
+  const t = useTranslations("account.resetRequest");
+  const td = useTranslations("account.dialog");
+  const { text, message } = useAuthMessage();
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     const address = email.trim();
     if (!looksLikeEmail(address)) {
-      setError("Enter your email address, like name@example.org.");
+      setError(text("enterEmail"));
       return;
     }
     setError(null);
     setBusy(true);
     const { error } = await authClient.requestPasswordReset({
       email: address,
-      redirectTo: "/reset-password",
+      // The reset page in this page's language; the email follows it too.
+      redirectTo: getPathname({ href: "/reset-password", locale }),
     });
     setBusy(false);
     // Only a limit or a dead connection is worth saying; nothing else gives away
     // whether the address has an account.
     if (error && (error.status === 429 || !error.status)) {
-      setError(authMessage(error).text);
+      setError(message(error).text);
       return;
     }
     setSentTo(address);
@@ -272,12 +286,14 @@ function ResetRequest() {
     return (
       <div className="flex flex-col gap-5">
         <Notice>
-          If there&apos;s an account for <EmailText email={sentTo} className="font-semibold" />,
-          we&apos;ve sent it a link to choose a new password. The link works once, for one hour.
+          {t.rich("sent", {
+            email: sentTo,
+            strong: () => <EmailText email={sentTo} className="font-semibold" />,
+          })}
         </Notice>
         <div className="flex justify-end">
           <Button variant="primary" onClick={() => set({ mode: "signin" })}>
-            Back to sign in
+            {t("back")}
           </Button>
         </div>
       </div>
@@ -286,10 +302,8 @@ function ResetRequest() {
 
   return (
     <form noValidate onSubmit={submit} className="flex flex-col gap-5">
-      <p className="text-sm leading-relaxed text-ink-soft">
-        Enter the email you use for teamsheet11. We&apos;ll send a link to choose a new password.
-      </p>
-      <Field label="Email" htmlFor={id}>
+      <p className="text-sm leading-relaxed text-ink-soft">{t("intro", { app: APP_NAME })}</p>
+      <Field label={td("email")} htmlFor={id}>
         <TextInput
           id={id}
           type="email"
@@ -313,10 +327,10 @@ function ResetRequest() {
           onClick={() => set({ mode: "signin" })}
           className="text-[13px] font-medium text-ink underline underline-offset-4 hover:text-ink-soft"
         >
-          Back to sign in
+          {t("back")}
         </button>
         <Button type="submit" variant="primary" disabled={busy}>
-          {busy ? "Sending…" : "Send reset link"}
+          {busy ? t("sending") : t("send")}
         </Button>
       </div>
     </form>
@@ -329,20 +343,21 @@ function CheckInbox() {
   const set = useAuthDialog((s) => s.set);
   const pathname = usePathname();
   const inStudio = pathname === "/studio";
+  const t = useTranslations("account.inbox");
 
   return (
     <div className="flex flex-col gap-5">
       <Notice>
-        We sent a link to <EmailText email={email} className="font-semibold text-ink" />. Open it to
-        confirm your email. Your clubs start saving to your account after that.
+        {t.rich("sent", {
+          email,
+          strong: () => <EmailText email={email} className="font-semibold text-ink" />,
+        })}
       </Notice>
-      <p className="text-[13px] leading-relaxed text-ink-soft">
-        You&apos;re signed in already, so you can keep working. Nothing in this browser is lost.
-      </p>
+      <p className="text-[13px] leading-relaxed text-ink-soft">{t("keepWorking")}</p>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ResendButton email={email} />
         <Button variant="primary" onClick={() => set({ open: false })}>
-          {inStudio ? "Back to the studio" : "Close"}
+          {inStudio ? t("backToStudio") : t("close")}
         </Button>
       </div>
     </div>
@@ -364,17 +379,20 @@ function Notice({ children }: { children: ReactNode }) {
 }
 
 function PrivacyLine() {
+  const t = useTranslations("account.dialog");
   return (
     <p className="text-xs text-ink-soft">
-      What an account stores and where:{" "}
-      <Link
-        href="/privacy"
-        className="text-ink underline underline-offset-4"
-        onClick={() => useAuthDialog.getState().set({ open: false })}
-      >
-        privacy
-      </Link>
-      .
+      {t.rich("privacy", {
+        link: (chunks) => (
+          <Link
+            href="/privacy"
+            className="text-ink underline underline-offset-4"
+            onClick={() => useAuthDialog.getState().set({ open: false })}
+          >
+            {chunks}
+          </Link>
+        ),
+      })}
     </p>
   );
 }
@@ -424,20 +442,23 @@ export function ResendButton({
   const start = useResend((s) => s.start);
   const left = useSecondsLeft(until);
   const [busy, setBusy] = useState(false);
+  const locale = useLocale();
+  const t = useTranslations("account.resend");
+  const { message } = useAuthMessage();
 
   async function resend() {
     setBusy(true);
     const { error } = await authClient.sendVerificationEmail({
       email,
-      callbackURL: VERIFIED_URL,
+      callbackURL: verifiedUrl(locale),
     });
     setBusy(false);
     if (error) {
-      toast.error(authMessage(error).text);
+      toast.error(message(error).text);
       return;
     }
     start(email);
-    toast("Sent. Check your inbox.", { description: email });
+    toast(t("sent"), { description: email });
   }
 
   return (
@@ -447,7 +468,7 @@ export function ResendButton({
       disabled={busy || left > 0}
       className={clsx("tabular-nums", className)}
     >
-      {busy ? "Sending…" : left > 0 ? `Send again in ${left} s` : "Send the link again"}
+      {busy ? t("sending") : left > 0 ? t("wait", { seconds: left }) : t("button")}
     </Button>
   );
 }

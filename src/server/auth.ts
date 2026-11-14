@@ -47,6 +47,7 @@ export const auth = betterAuth({
     revokeSessionsOnPasswordReset: true,
     resetPasswordTokenExpiresIn: 60 * 60,
     sendResetPassword: async ({ user, url }) => {
+      // In the language of the page that asked: read from the callback URL in the link.
       await sendMail(resetPassword(user.email, url));
     },
   },
@@ -57,6 +58,7 @@ export const auth = betterAuth({
     autoSignInAfterVerification: false,
     expiresIn: 60 * 60 * 24,
     sendVerificationEmail: async ({ user, url }) => {
+      // In the language of the page that asked: read from the callback URL in the link.
       await sendMail(verifyEmail(user.email, url));
     },
   },

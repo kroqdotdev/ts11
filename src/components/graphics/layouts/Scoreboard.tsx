@@ -3,6 +3,7 @@
  * team sheet are lit up on a dot-matrix board in a heavy housing.
  */
 import type { ReactNode } from "react";
+import { subsHeadline, textFor } from "@/lib/graphicText";
 import { alpha, contrast, luminance, mix } from "@/lib/color";
 import type { Colors } from "@/lib/types";
 import { SubsLine } from "../LineupList";
@@ -265,7 +266,7 @@ export function NightFixture({ team, design, theme }: LayoutProps) {
     Math.max(
       Math.min(teamNeed(f.home.name, null), 96),
       f.versus ? Math.min(teamNeed(f.away.name, null), 96) : 0,
-      ledWidth("KO") + 4 + ledWidth(f.kickoff, 2) + 2,
+      ledWidth(textFor(team).kickoffShort) + 4 + ledWidth(f.kickoff, 2) + 2,
       ledWidth(f.date) + 2,
       54,
     ),
@@ -293,7 +294,7 @@ export function NightFixture({ team, design, theme }: LayoutProps) {
       {f.versus && (
         <>
           <LedRow
-            parts={[{ text: "V", color: amber(theme) }]}
+            parts={[{ text: textFor(team).vStacked, color: amber(theme) }]}
             cols={cols}
             pitch={pitch}
             align="left"
@@ -314,7 +315,7 @@ export function NightFixture({ team, design, theme }: LayoutProps) {
       {f.kickoff && (
         <LedRow
           parts={[
-            { text: "KO", color: alpha(WHITE, 0.6) },
+            { text: textFor(team).kickoffShort, color: alpha(WHITE, 0.6) },
             { text: f.kickoff, color: amber(theme), scale: 2 },
           ]}
           cols={cols}
@@ -402,7 +403,8 @@ export function NightResult({
   const homeScore = String(f.home.us ? s.us : s.them);
   const awayScore = String(f.home.us ? s.them : s.us);
   const score = f.versus ? `${homeScore}-${awayScore}` : homeScore;
-  const label = half ? "HALF TIME" : "FULL TIME";
+  const t = textFor(team);
+  const label = half ? t.headlines.halftime : t.headlines.result;
 
   // Team names share one row under the score, home left and away right; long
   // names give way to the short names so neither gets cut.
@@ -756,7 +758,11 @@ export function NightLineup({ team, design, theme }: LayoutProps) {
   // The board is sized for the typical name, not the longest: one long name
   // falls back to its surname instead of shrinking every dot on the board.
   const widths = rows
-    .map((r) => ledWidth(r.name.replace(/\. /g, ".")) + (r.captain ? 4 + ledWidth("C") : 0))
+    .map(
+      (r) =>
+        ledWidth(r.name.replace(/\. /g, ".")) +
+        (r.captain ? 4 + ledWidth(textFor(team).captain) : 0),
+    )
     .sort((a, b) => a - b);
   const longest = widths[Math.floor((widths.length - 1) * 0.8)] ?? 0;
   const byHeight = (availH - 30 * u) / dotsTall;
@@ -784,7 +790,7 @@ export function NightLineup({ team, design, theme }: LayoutProps) {
               ? surname
               : ledClip(surname, nameRoom);
         parts.push({ text: label, color: WHITE });
-        if (r.captain) parts.push({ text: "C", color: amber(theme) });
+        if (r.captain) parts.push({ text: textFor(team).captain, color: amber(theme) });
         return (
           <LedRow
             key={r.id}
@@ -1048,7 +1054,7 @@ export function NightPitch({ team, design, theme }: LayoutProps) {
   // Sized for the typical name, not the longest: one long name must not shrink
   // the whole key. Names that still don't fit drop to the surname, then clip.
   const floor = minText(theme) * 1.15;
-  const keyNames0 = placed.map((pl) => displayName(pl.player!, design.nameStyle));
+  const keyNames0 = placed.map((pl) => displayName(pl.player!, design.nameStyle, team.language));
   const sorted = [...keyNames0].sort((a, b) => a.length - b.length);
   const typical = sorted[Math.floor((sorted.length - 1) * 0.8)] ?? "";
   const keySize = Math.max(
@@ -1065,7 +1071,7 @@ export function NightPitch({ team, design, theme }: LayoutProps) {
       : 0;
   const keyRows = placed.map((pl, i) => {
     const avail = colW - keyFont * 1.3 - keyFont * 0.5 - capW(pl.player!.id) - 4 * u;
-    const surname = displayName(pl.player!, "surname");
+    const surname = displayName(pl.player!, "surname", team.language);
     const twoLines = keyRow >= keyFont * 1.9;
     const options: string[][] = [[keyNames0[i]], [surname]];
     if (twoLines) {
@@ -1143,7 +1149,7 @@ export function NightPitch({ team, design, theme }: LayoutProps) {
           </span>
           {design.showCaptain && team.lineup.captainId === pl.player!.id && (
             <span style={{ color: amber(theme), fontSize: legible(theme, keyFont * 0.7) }}>
-              (C)
+              ({textFor(team).captain})
             </span>
           )}
         </div>
@@ -1239,10 +1245,7 @@ export function NightSubs({ team, design, theme }: LayoutProps) {
   const box = frame(theme, design);
   const byId = new Map(team.players.map((p) => [p.id, p]));
   const subs = team.match.subs.slice(0, 5);
-  const headline =
-    subs.length === 1 && design.headlines.subs === "Substitutions"
-      ? "Substitution"
-      : design.headlines.subs;
+  const headline = subsHeadline(design, team, subs.length);
   const listTop = box.split ? pad : pad + headerH(theme) + 50 * u;
   const listBottom = h - pad - (box.split ? 0 : design.footer ? 80 * u : 20 * u);
   const gap = 28 * u;
@@ -1260,7 +1263,7 @@ export function NightSubs({ team, design, theme }: LayoutProps) {
     .flatMap((s) => [s.onId, s.offId])
     .map((id) => {
       const p = id ? byId.get(id) : undefined;
-      return p ? displayName(p, design.nameStyle) : "";
+      return p ? displayName(p, design.nameStyle, team.language) : "";
     });
   const longest = names.reduce((a, b) => (b.length > a.length ? b : a), "");
   const nameSize = Math.min(rowH * 0.27, fit(longest + "  ", textW - rowH * 0.2, 999, theme));
@@ -1345,7 +1348,7 @@ export function NightSubs({ team, design, theme }: LayoutProps) {
                   }}
                 >
                   <Triangle up={up} size={nameSize * 0.6} color={color} />
-                  {p ? displayName(p, design.nameStyle) : ""}
+                  {p ? displayName(p, design.nameStyle, team.language) : ""}
                 </div>
               ))}
             </div>
@@ -1398,7 +1401,7 @@ export function NightMotm({ team, design, theme }: LayoutProps) {
   const s = finalScore(team);
   const fullLine = scoreLine(team, s.us, s.them, true);
   const number = player?.number.trim() ?? "";
-  const name = player ? displayName(player, "surname") : "";
+  const name = player ? displayName(player, "surname", team.language) : "";
   const top = box.split ? pad : pad + headerH(theme) + 40 * u;
   const bottom = h - pad - (box.split ? 0 : (team.match.motmNote ? 160 : 70) * u);
 
@@ -1473,7 +1476,7 @@ export function NightMotm({ team, design, theme }: LayoutProps) {
     </Housing>
   ) : null;
 
-  const fullName = player ? displayName(player, "full") : "";
+  const fullName = player ? displayName(player, "full", team.language) : "";
   const note = team.match.motmNote.trim();
   const caption = (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 * u }}>
@@ -1586,13 +1589,27 @@ export function NightFixtures({ team, design, theme }: LayoutProps) {
   const top = box.split ? pad : pad + headerH(theme) + 40 * u;
   const bottom = h - pad - (box.split ? 0 : design.footer ? 80 * u : 20 * u);
   // "21 NOV": the weekday would crowd out the opponent on the board.
-  const dateText = (iso: string) => formatMatchDate(iso).split(" ").slice(1).join(" ");
+  const dateText = (iso: string) =>
+    formatMatchDate(iso, team.language).split(" ").slice(1).join(" ");
   const right = (f: (typeof rows)[number]) => f.score.trim() || f.kickoff;
   const dateW = Math.max(...rows.map((f) => ledWidth(dateText(f.date))), 0);
   const rightW = Math.max(...rows.map((f) => ledWidth(right(f))), 0);
   // Pad, date, H/A, opponent, the score or time, and the gaps between them.
-  const fixed = 4 + dateW + 4 + ledWidth("H") + 4 + 6 + rightW;
-  const need = Math.max(56, ...rows.map((f) => fixed + Math.min(ledWidth(f.opponent), 96)));
+  const fixed =
+    4 +
+    dateW +
+    4 +
+    Math.max(ledWidth(textFor(team).homeLetter), ledWidth(textFor(team).awayLetter)) +
+    4 +
+    6 +
+    rightW;
+  // The header carries "Next up" and the club on one row.
+  const header = ledWidth(textFor(team).nextUp) + 8 + ledWidth(team.shortName || team.name);
+  const need = Math.max(
+    56,
+    Math.min(header, 120),
+    ...rows.map((f) => fixed + Math.min(ledWidth(f.opponent), 96)),
+  );
   const perRow = 11 + 9 + 3;
   const dotsTall = 9 + 3 + perRow * Math.max(rows.length, 1);
   const { pitch, cols } = fitBoard(
@@ -1606,7 +1623,7 @@ export function NightFixtures({ team, design, theme }: LayoutProps) {
     <Housing theme={theme} pitch={pitch}>
       <LedRow
         parts={[
-          { text: "NEXT UP", color: amber(theme) },
+          { text: textFor(team).nextUp, color: amber(theme) },
           { text: team.shortName || team.name, color: DIM_WHITE },
         ]}
         cols={cols}
@@ -1625,7 +1642,10 @@ export function NightFixtures({ team, design, theme }: LayoutProps) {
             <LedRow
               parts={[
                 { text: dateText(f.date), color: WHITE, minWidth: dateW },
-                { text: f.isHome ? "H" : "A", color: amber(theme) },
+                {
+                  text: f.isHome ? textFor(team).homeLetter : textFor(team).awayLetter,
+                  color: amber(theme),
+                },
                 { text: ledClip(f.opponent, oppRoom), color: WHITE },
                 { text: r, color: f.score.trim() ? GREEN : amber(theme) },
               ]}

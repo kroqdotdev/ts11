@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { textFor } from "@/lib/graphicText";
 import { alpha, COAL, contrast, readableOn, SNOW, tonal } from "@/lib/color";
 import { formatMatchDate } from "@/lib/format";
 import { fixtureRows } from "../selection";
@@ -766,7 +767,7 @@ export function PosterLineup(props: LayoutProps) {
   // make that size small, the whole list switches to surnames.
   const items = (short: boolean) =>
     rows.map((r): Item => ({
-      text: `${short ? surnameOf(r.name) : r.name}${r.captain ? " (C)" : ""}`,
+      text: `${short ? surnameOf(r.name) : r.name}${r.captain ? ` (${textFor(team).captain})` : ""}`,
       lead:
         design.showNumbers && r.number ? { text: r.number, color: k.accentOnGround } : undefined,
       max: base,
@@ -784,7 +785,7 @@ export function PosterLineup(props: LayoutProps) {
       color: k.softOnGround,
       after: 0.15,
       wrap: true,
-      lead: i === 0 ? { text: "Subs", color: k.accentOnGround } : undefined,
+      lead: i === 0 ? { text: textFor(team).subs, color: k.accentOnGround } : undefined,
     });
   const footer = footerItems(design, theme, k);
   const cut = !!design.featureImage;
@@ -846,7 +847,10 @@ export function PosterSubs(props: LayoutProps) {
       ? [
           {
             text: s.off,
-            lead: { text: s.on ? "for" : "off", color: k.softOnGround },
+            lead: {
+              text: s.on ? textFor(team).subFor : textFor(team).off.toLowerCase(),
+              color: k.softOnGround,
+            },
             max: (tall ? 54 : 46) * u,
             color: k.softOnGround,
             after: 0.7,
@@ -865,7 +869,7 @@ export function PosterSubs(props: LayoutProps) {
           team={team}
           theme={theme}
           ink={k}
-          title={subsHeadline(design, rows.length)}
+          title={subsHeadline(design, team, rows.length)}
           sub={versusLine(team)}
           L={L}
           T={T}
@@ -954,10 +958,19 @@ export function PosterFixtures(props: LayoutProps) {
     (withComp: boolean) =>
     (f: (typeof rows)[number], i: number): Item[] => [
       {
-        text: [formatMatchDate(f.date), f.isHome ? "Home" : "Away", withComp ? f.competition : ""]
+        text: [
+          formatMatchDate(f.date, team.language),
+          f.isHome ? textFor(team).home : textFor(team).away,
+          withComp ? f.competition : "",
+        ]
           .filter(Boolean)
           .join(" · "),
-        alts: [[formatMatchDate(f.date), f.isHome ? "Home" : "Away"].join(" · ")],
+        alts: [
+          [
+            formatMatchDate(f.date, team.language),
+            f.isHome ? textFor(team).home : textFor(team).away,
+          ].join(" · "),
+        ],
         max: 32 * u,
         color: k.softOnGround,
         after: 0.15,

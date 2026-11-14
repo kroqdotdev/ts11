@@ -4,6 +4,7 @@
  * photo as a picture box with a caption rather than a full-bleed wash.
  */
 import type { CSSProperties, ReactNode } from "react";
+import { subsHeadline, textFor } from "@/lib/graphicText";
 import { COAL, alpha, contrast, readableOn } from "@/lib/color";
 import { displayName, formatMatchDate } from "@/lib/format";
 import type { Rect } from "../LineupPitch";
@@ -408,14 +409,15 @@ export function BackPageFixture({ team, design, theme }: LayoutProps) {
   const ink = inks(theme);
   const f = facts(team);
   const col = column(theme, design);
-  const deck = f.versus ? `${f.home.name} v ${f.away.name}` : team.name;
+  const t = textFor(team);
+  const deck = f.versus ? `${f.home.name} ${t.v} ${f.away.name}` : team.name;
   const deckShort = f.versus
-    ? `${shortOf(team, f.home)} v ${shortOf(team, f.away)}`
+    ? `${shortOf(team, f.home)} ${t.v} ${shortOf(team, f.away)}`
     : team.shortName || team.name;
   const table = [
-    { label: "Kick-off", value: f.kickoff },
-    { label: "Date", value: f.date },
-    { label: "Venue", value: f.venue },
+    { label: t.kickoff, value: f.kickoff },
+    { label: t.date, value: f.date },
+    { label: t.venue, value: f.venue },
   ];
 
   if (wide && !design.featureImage) {
@@ -452,7 +454,13 @@ export function BackPageFixture({ team, design, theme }: LayoutProps) {
               caption={versusLine(team)}
             />
           ) : (
-            <BigTime theme={theme} ink={ink} time={f.kickoff} width={half - 20 * u} />
+            <BigTime
+              theme={theme}
+              ink={ink}
+              time={f.kickoff}
+              width={half - 20 * u}
+              label={t.kickoff}
+            />
           )}
         </div>
         <Foot theme={theme} design={design} ink={ink} />
@@ -475,7 +483,7 @@ export function BackPageFixture({ team, design, theme }: LayoutProps) {
         <Picture design={design} theme={theme} ink={ink} style={{ flex: 1 }} />
       ) : (
         <div style={{ flex: 1, display: "flex", alignItems: "center", minHeight: 0 }}>
-          <BigTime theme={theme} ink={ink} time={f.kickoff} width={col.width} />
+          <BigTime theme={theme} ink={ink} time={f.kickoff} width={col.width} label={t.kickoff} />
         </div>
       )}
       <Rule ink={ink.ink} weight={2 * u} u={u} />
@@ -505,9 +513,10 @@ function DeckLines({
   max: number;
 }) {
   const f = facts(team);
-  const deck = f.versus ? `${f.home.name} v ${f.away.name}` : team.name;
+  const t = textFor(team);
+  const deck = f.versus ? `${f.home.name} ${t.v} ${f.away.name}` : team.name;
   const deckShort = f.versus
-    ? `${shortOf(team, f.home)} v ${shortOf(team, f.away)}`
+    ? `${shortOf(team, f.home)} ${t.v} ${shortOf(team, f.away)}`
     : team.shortName || team.name;
   const one = fit(deck, width, max, theme);
   const style = {
@@ -521,7 +530,7 @@ function DeckLines({
     return <div style={{ ...style, fontSize: legible(theme, one) }}>{deck}</div>;
   const size = Math.min(
     fit(f.home.name, width, max, theme),
-    fit(`v ${f.away.name}`, width, max, theme),
+    fit(`${t.v} ${f.away.name}`, width, max, theme),
   );
   // Still too small on two lines: the short names read better.
   if (size < minText(theme) * 1.2)
@@ -538,7 +547,9 @@ function DeckLines({
   return (
     <div style={{ ...style, fontSize: legible(theme, size) }}>
       <div>{f.home.name}</div>
-      <div>v {f.away.name}</div>
+      <div>
+        {t.v} {f.away.name}
+      </div>
     </div>
   );
 }
@@ -549,13 +560,14 @@ function BigTime({
   ink,
   time,
   width,
-  label = "Kick-off",
+  label,
 }: {
   theme: Theme;
   ink: Ink;
   time: string;
   width: number;
-  label?: string;
+  /** "Kick-off", "Score" or nothing, in the club's language. */
+  label: string;
 }) {
   if (!time) return <div style={{ flex: 1 }} />;
   const size = fit(time, width, 360 * theme.u, theme);
@@ -622,7 +634,7 @@ function ScorerCopy({
   return (
     <Copy theme={theme} ink={ink} columns={columns}>
       <b style={{ fontWeight: theme.font.heavy, color: ink.accent, textTransform: "uppercase" }}>
-        Goals{" "}
+        {textFor(team).goals}{" "}
       </b>
       {parts}
     </Copy>
@@ -923,7 +935,7 @@ export function BackPageGoal({ team, design, theme }: LayoutProps) {
             <BigTime
               theme={theme}
               ink={ink}
-              label="Score"
+              label={textFor(team).score}
               time={team.match.isHome ? `${g.us}-${g.them}` : `${g.them}-${g.us}`}
               width={col.width}
             />
@@ -1015,7 +1027,7 @@ export function BackPageLineup({ team, design, theme }: LayoutProps) {
                       padding: `${3 * u}px ${8 * u}px`,
                     }}
                   >
-                    C
+                    {textFor(team).captain}
                   </span>
                 )}
               </div>
@@ -1030,7 +1042,7 @@ export function BackPageLineup({ team, design, theme }: LayoutProps) {
   const subs = bench.length ? (
     <Copy theme={theme} ink={ink} columns={1}>
       <b style={{ fontWeight: theme.font.heavy, color: ink.accent, textTransform: "uppercase" }}>
-        Subs{" "}
+        {textFor(team).subs}{" "}
       </b>
       {bench.join(", ")}
     </Copy>
@@ -1185,7 +1197,7 @@ export function BackPagePitch({ team, design, theme }: LayoutProps) {
               padding: `0 ${size * 0.08}px`,
             }}
           >
-            C
+            {textFor(team).captain}
           </span>
         )}
       </div>
@@ -1196,7 +1208,7 @@ export function BackPagePitch({ team, design, theme }: LayoutProps) {
   const subs = bench.length ? (
     <Copy theme={theme} ink={ink}>
       <b style={{ fontWeight: theme.font.heavy, color: ink.accent, textTransform: "uppercase" }}>
-        Subs{" "}
+        {textFor(team).subs}{" "}
       </b>
       {bench.join(", ")}
     </Copy>
@@ -1270,10 +1282,7 @@ export function BackPageSubs({ team, design, theme }: LayoutProps) {
   const split = wide && !design.featureImage;
   const byId = new Map(team.players.map((p) => [p.id, p]));
   const subs = team.match.subs.slice(0, 5);
-  const headline =
-    subs.length === 1 && design.headlines.subs === "Substitutions"
-      ? "Substitution"
-      : design.headlines.subs;
+  const headline = subsHeadline(design, team, subs.length);
   const listW = split ? w * 0.56 - pad : col.width;
   const splash = fit(headline, split ? w * 0.4 : col.width, (theme.tall ? 200 : 160) * u, theme);
   const listH = split
@@ -1286,7 +1295,7 @@ export function BackPageSubs({ team, design, theme }: LayoutProps) {
     .map((id) => {
       const p = id ? byId.get(id) : undefined;
       return p
-        ? `${design.showNumbers ? p.number + " " : ""}${displayName(p, design.nameStyle)}`
+        ? `${design.showNumbers ? p.number + " " : ""}${displayName(p, design.nameStyle, team.language)}`
         : "";
     });
   const longest = names.reduce((a, b) => (b.length > a.length ? b : a), "");
@@ -1317,14 +1326,14 @@ export function BackPageSubs({ team, design, theme }: LayoutProps) {
             width: nameSize * 0.9,
           }}
         >
-          {on ? "ON" : "OFF"}
+          {on ? textFor(team).on : textFor(team).off}
         </span>
         {p && design.showNumbers && (
           <span style={{ color: on ? ink.accent : ink.soft, fontVariantNumeric: "tabular-nums" }}>
             {p.number}
           </span>
         )}
-        <span>{p ? displayName(p, design.nameStyle) : ""}</span>
+        <span>{p ? displayName(p, design.nameStyle, team.language) : ""}</span>
       </div>
     );
   };
@@ -1451,15 +1460,15 @@ export function BackPageMotm({ team, design, theme }: LayoutProps) {
       ink={ink}
       style={{ fontSize: legible(theme, (theme.tall ? 40 : 34) * u), fontStyle: "italic" }}
     >
-      “{note}”
+      {textFor(team).quote(note)}
     </Copy>
   ) : null;
   const table = (
     <FactTable
       items={[
-        { label: "Shirt", value: player?.number ?? "" },
-        { label: "Result", value: line, alt: lineShort },
-        { label: "Date", value: facts(team).date },
+        { label: textFor(team).shirt, value: player?.number ?? "" },
+        { label: textFor(team).result, value: line, alt: lineShort },
+        { label: textFor(team).date, value: facts(team).date },
       ]}
       theme={theme}
       ink={ink}
@@ -1539,7 +1548,7 @@ export function BackPageFixtures({ team, design, theme }: LayoutProps) {
   const list = (
     <div style={{ display: "flex", flexDirection: "column", width: listW, flexShrink: 0 }}>
       {rows.map((f, i) => {
-        const [weekday, day, month] = formatMatchDate(f.date).split(" ");
+        const [weekday, day, month] = formatMatchDate(f.date, team.language).split(" ");
         const right = f.score.trim() || f.kickoff;
         return (
           <div
@@ -1586,7 +1595,7 @@ export function BackPageFixtures({ team, design, theme }: LayoutProps) {
                 fontWeight: theme.font.heavy,
               }}
             >
-              {f.isHome ? "H" : "A"}
+              {f.isHome ? textFor(team).homeLetter : textFor(team).awayLetter}
             </span>
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
               <span

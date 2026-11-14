@@ -14,8 +14,11 @@ import {
 } from "./dbu";
 import { blankTeam, defaultDesign, defaultMatch, demoTeam } from "./demo";
 import { FORMATIONS, formationSlots, TEAM_SIZES } from "./formation";
+import { pageLanguage } from "./language";
 import { uid } from "./id";
 import { autoLineup } from "./squad";
+import daUi from "../../messages/da/ui.json";
+import enUi from "../../messages/en/ui.json";
 import type {
   BackgroundPhoto,
   DbuLink,
@@ -48,7 +51,9 @@ interface Actions {
   addTeam: () => void;
   removeTeam: (id: string) => void;
   updateTeam: (
-    patch: Partial<Pick<Team, "name" | "shortName" | "crest" | "crestKind" | "colors">>,
+    patch: Partial<
+      Pick<Team, "name" | "shortName" | "crest" | "crestKind" | "colors" | "language">
+    >,
   ) => void;
 
   addPlayer: (player?: Partial<Player>) => string;
@@ -130,8 +135,14 @@ export interface RemovedPlayer {
 }
 
 function initial(): Snapshot {
-  const team = demoTeam();
-  return { teams: [team], activeTeamId: team.id, design: defaultDesign(), onboarded: false };
+  const language = pageLanguage();
+  const team = demoTeam(undefined, undefined, language);
+  return {
+    teams: [team],
+    activeTeamId: team.id,
+    design: defaultDesign(language),
+    onboarded: false,
+  };
 }
 
 let warnedQuota = false;
@@ -155,9 +166,9 @@ function writeNow() {
   } catch {
     if (!warnedQuota) {
       warnedQuota = true;
-      toast.error("Browser storage is full", {
-        description: "Your last change was not saved. Remove a large photo and try again.",
-      });
+      // Outside React, so the words come straight from the page language's messages.
+      const words = (pageLanguage() === "da" ? daUi : enUi).storageFull;
+      toast.error(words.title, { description: words.description });
     }
   }
 }
@@ -212,13 +223,13 @@ export const useStudio = create<StudioState>()(
 
         setActiveTeam: (id) => set({ activeTeamId: id }),
         addTeam: () => {
-          const team = blankTeam(uid());
+          const team = blankTeam(uid(), pageLanguage());
           set((s) => ({ teams: [...s.teams, team], activeTeamId: team.id }));
         },
         removeTeam: (id) =>
           set((s) => {
             const teams = s.teams.filter((t) => t.id !== id);
-            if (teams.length === 0) teams.push(blankTeam(uid()));
+            if (teams.length === 0) teams.push(blankTeam(uid(), pageLanguage()));
             return {
               teams,
               activeTeamId: s.activeTeamId === id ? teams[0].id : s.activeTeamId,
@@ -500,7 +511,7 @@ export const useStudio = create<StudioState>()(
             let match = t.match;
             if (parts.score) {
               const goals = plan.goals.map((g) =>
-                g.side === "us" && !g.playerId && g.name !== "Own goal"
+                g.side === "us" && !g.playerId && g.name
                   ? { ...g, playerId: findPlayerByName(players, g.name)?.id ?? null }
                   : g,
               );

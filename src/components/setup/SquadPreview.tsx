@@ -1,8 +1,7 @@
 import { ArrowUUpLeftIcon, WarningIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { useTranslations } from "next-intl";
 import { squadWarnings, type IgnoredLine, type ParsedPlayer } from "@/lib/squad";
-
-const POS = { GK: "GK", DF: "DEF", MF: "MID", FW: "ATT" } as const;
 
 /**
  * What a pasted squad list was read as: number, name, captain and position per line,
@@ -30,28 +29,31 @@ export function SquadPreview({
   /** Long squads read in two columns, so a whole squad fits without scrolling. */
   columns?: boolean;
 }) {
+  const t = useTranslations("setup.read");
+  const tp = useTranslations("studio.positions");
   const warnings = squadWarnings(players);
-  const warn = new Map(warnings.map((w) => [w.index, w.message]));
+  const warn = new Map(
+    warnings.map((w) => [
+      w.index,
+      w.code === "sameName"
+        ? t("warning.sameName", { other: w.other ?? 0 })
+        : t("warning.sameNumber", { number: w.number ?? "" }),
+    ]),
+  );
   const guessed = players.filter((p) => !p.positioned).length;
   const benched = players.filter((p) => p.section === "bench").length;
-  const left = ignored.filter((l) => !l.reason.startsWith("Heading"));
+  const left = ignored.filter((l) => l.code !== "benchHeading" && l.code !== "startersHeading");
 
   return (
     <div className={clsx("flex min-w-0 flex-col gap-2", rootClassName)}>
       <p className="text-xs text-ink-soft" aria-live="polite">
         {players.length === 0
-          ? "No players yet. You can add them later too."
+          ? t("none")
           : [
-              `${players.length} ${players.length === 1 ? "player" : "players"} found.`,
-              size
-                ? benched
-                  ? `${benched} listed as subs start on the bench; the rest fill their positions.`
-                  : "They fill the spots for their positions; the rest start on the bench."
-                : "",
-              guessed ? `${guessed} with no position fill the gaps in list order.` : "",
-              left.length
-                ? `${left.length} chat ${left.length === 1 ? "line" : "lines"} left out.`
-                : "",
+              t("found", { count: players.length }),
+              size ? (benched ? t("benched", { count: benched }) : t("fill")) : "",
+              guessed ? t("guessed", { count: guessed }) : "",
+              left.length ? t("chat", { count: left.length }) : "",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -59,7 +61,7 @@ export function SquadPreview({
       {warnings.length > 0 && (
         <p className="flex items-center gap-1.5 text-xs font-medium text-danger" role="status">
           <WarningIcon size={14} weight="fill" aria-hidden />
-          {warnings.length === 1 ? "1 line needs a look" : `${warnings.length} lines need a look`}
+          {t("warnings", { count: warnings.length })}
         </p>
       )}
       {/* relative: keeps the sr-only labels inside this box when it scrolls. */}
@@ -91,9 +93,10 @@ export function SquadPreview({
                     {p.captain && (
                       <span
                         className="ml-1.5 inline-grid size-4 place-items-center rounded-full bg-card align-[1px] text-[10px] font-bold text-card-ink"
-                        title="Captain"
+                        title={t("captain")}
                       >
-                        C<span className="sr-only">aptain</span>
+                        <span aria-hidden>{t("captainLetter")}</span>
+                        <span className="sr-only">{t("captain")}</span>
                       </span>
                     )}
                   </span>
@@ -102,9 +105,9 @@ export function SquadPreview({
                       "shrink-0 text-[11px]",
                       p.positioned ? "text-ink-soft" : "text-ink-soft/60 italic",
                     )}
-                    title={p.positioned ? undefined : "No position given"}
+                    title={p.positioned ? undefined : t("noPosition")}
                   >
-                    {POS[p.position]}
+                    {tp(p.position)}
                     {!p.positioned && "?"}
                   </span>
                   {problem && (
@@ -120,7 +123,7 @@ export function SquadPreview({
         {left.length > 0 && (
           <details className="group text-[12px]">
             <summary className="cursor-pointer font-medium text-ink-soft select-none hover:text-ink">
-              Left out ({left.length})
+              {t("leftOut", { count: left.length })}
             </summary>
             <ul className="mt-1.5 flex flex-col gap-1">
               {left.map((l) => (
@@ -132,7 +135,9 @@ export function SquadPreview({
                     <span className="block truncate text-ink" title={l.text}>
                       {l.text}
                     </span>
-                    <span className="block text-[11px] text-ink-soft">{l.reason}</span>
+                    <span className="block text-[11px] text-ink-soft">
+                      {t(`ignored.${l.code}`)}
+                    </span>
                   </span>
                   {onRestore && l.restorable && (
                     <button
@@ -141,7 +146,7 @@ export function SquadPreview({
                       className="inline-flex shrink-0 items-center gap-1 rounded-[2px] border-2 border-card-ink bg-paper px-1.5 py-0.5 text-[11px] font-semibold text-card-ink hover:bg-card"
                     >
                       <ArrowUUpLeftIcon size={12} weight="bold" aria-hidden />
-                      It&rsquo;s a player
+                      {t("isPlayer")}
                       <span className="sr-only">: {l.text}</span>
                     </button>
                   )}

@@ -3,28 +3,39 @@
 import { useStudio } from "@/lib/store";
 import type { Design, Team } from "@/lib/types";
 
-/** Every place in the studio an image link can sit, with a readable label. */
+/**
+ * A place in the studio an image can sit. The names are as typed (possibly empty);
+ * the page puts them into words in its own language.
+ */
+export type ImagePlace =
+  | { kind: "crest"; club: string }
+  | { kind: "opponentCrest"; club: string; opponent: string }
+  | { kind: "background" }
+  | { kind: "feature" }
+  | { kind: "sponsor" };
+
+/** Every place in the studio an image link can sit. */
 function slots(teams: Team[], design: Design) {
-  const out: { url: string | null; label: string }[] = [];
+  const out: { url: string | null; place: ImagePlace }[] = [];
   for (const t of teams) {
-    out.push({ url: t.crest, label: `${t.name || "Unnamed club"} crest` });
+    out.push({ url: t.crest, place: { kind: "crest", club: t.name } });
     out.push({
       url: t.match.opponentCrest,
-      label: `${t.match.opponent || "Opponent"} crest (${t.name || "club"})`,
+      place: { kind: "opponentCrest", club: t.name, opponent: t.match.opponent },
     });
   }
-  out.push({ url: design.background.image, label: "Background photo" });
-  out.push({ url: design.featureImage, label: "Player cut-out" });
-  out.push({ url: design.sponsorImage, label: "Sponsor logo" });
+  out.push({ url: design.background.image, place: { kind: "background" } });
+  out.push({ url: design.featureImage, place: { kind: "feature" } });
+  out.push({ url: design.sponsorImage, place: { kind: "sponsor" } });
   return out;
 }
 
-/** Where an uploaded image is used, by its URL, e.g. ["Ashby Vale crest"]. */
-export function imageUsage(url: string): string[] {
+/** Where an uploaded image is used, by its URL, e.g. [{ kind: "crest", club: "Ashby Vale" }]. */
+export function imageUsage(url: string): ImagePlace[] {
   const s = useStudio.getState();
   return slots(s.teams, s.design)
     .filter((x) => x.url === url)
-    .map((x) => x.label);
+    .map((x) => x.place);
 }
 
 /** Clears an image from every club and the design, after it was deleted. */

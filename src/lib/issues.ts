@@ -2,8 +2,33 @@ import type { PanelId } from "./store";
 import { minuteOf, scoreMismatch, scorerOf, spotlightGoal } from "./score";
 import type { Design, GraphicKind, Team } from "./types";
 
+/**
+ * What an issue says, as a key under `studio.issues` in messages/. The studio turns
+ * it into words with `useIssueText`, so this file stays free of interface text.
+ */
+export type IssueCode =
+  | "opponent"
+  | "starters"
+  | "startersEmpty"
+  | "goals"
+  | "scorer"
+  | "score"
+  | "halftimeScore"
+  | "subs"
+  | "subsPlayers"
+  | "motm"
+  | "fixtures"
+  | "scorerOff"
+  | "scorerOffNoMinute"
+  | "onAlready"
+  | "offNotOn"
+  | "noNumber"
+  | "noNumberMotm";
+
 export interface Issue {
-  message: string;
+  code: IssueCode;
+  /** Values for the message: `count`, a player's `name` (empty when unnamed), `minute`. */
+  values?: Record<string, string | number>;
   /** The studio tab where it gets fixed. */
   panel: PanelId;
   /** DOM id of the control that fixes it; "Fix it" focuses this after switching tab. */
@@ -50,7 +75,7 @@ export function graphicIssues(team: Team, design: Design): Issue[] {
   const kind = design.kind;
 
   if (kind !== "fixtures" && !m.opponent.trim()) {
-    issues.push({ message: "Add the opponent", panel: "match", field: FIELD.opponent });
+    issues.push({ code: "opponent", panel: "match", field: FIELD.opponent });
   }
 
   if (kind === "lineup" || kind === "pitch") {
@@ -58,26 +83,26 @@ export function graphicIssues(team: Team, design: Design): Issue[] {
     const empty = team.lineup.size - filled;
     if (filled === 0)
       issues.push({
-        message: "Pick your starting players",
+        code: "starters",
         panel: "lineup",
         field: FIELD.starters,
       });
     else if (empty > 0)
       issues.push({
-        message: `${empty} starting ${empty === 1 ? "place is" : "places are"} empty`,
+        code: "startersEmpty",
+        values: { count: empty },
         panel: "lineup",
         field: FIELD.starters,
       });
   }
 
   if (kind === "goal") {
-    if (m.goals.length === 0)
-      issues.push({ message: "Add a goal and who scored it", panel: "match", field: FIELD.goals });
+    if (m.goals.length === 0) issues.push({ code: "goals", panel: "match", field: FIELD.goals });
     else {
       const spot = spotlightGoal(team)?.goal;
       if (spot && !spot.name.trim() && !scorerOf(team, spot))
         issues.push({
-          message: "Add the scorer's name",
+          code: "scorer",
           panel: "match",
           field: FIELD.scorer(spot.id),
         });
@@ -85,33 +110,32 @@ export function graphicIssues(team: Team, design: Design): Issue[] {
   }
 
   if ((kind === "result" || kind === "goal") && scoreMismatch(m)) {
-    issues.push({ message: "Score doesn't match the goals", panel: "match", field: FIELD.score });
+    issues.push({ code: "score", panel: "match", field: FIELD.score });
   }
   if (kind === "halftime" && scoreMismatch(m, true)) {
     issues.push({
-      message: "Half-time score doesn't match the goals",
+      code: "halftimeScore",
       panel: "match",
       field: FIELD.score,
     });
   }
 
   if (kind === "subs") {
-    if (m.subs.length === 0)
-      issues.push({ message: "Add a substitution", panel: "match", field: FIELD.subs });
+    if (m.subs.length === 0) issues.push({ code: "subs", panel: "match", field: FIELD.subs });
     else if (m.subs.some((s) => !s.onId || !s.offId))
       issues.push({
-        message: "Pick who came on and who went off",
+        code: "subsPlayers",
         panel: "match",
         field: FIELD.subs,
       });
   }
 
   if (kind === "motm" && !team.players.some((p) => p.id === m.motmId)) {
-    issues.push({ message: "Pick the player of the match", panel: "match", field: FIELD.motm });
+    issues.push({ code: "motm", panel: "match", field: FIELD.motm });
   }
 
   if (kind === "fixtures" && team.fixtures.length === 0) {
-    issues.push({ message: "Add your upcoming fixtures", panel: "match", field: FIELD.fixtures });
+    issues.push({ code: "fixtures", panel: "match", field: FIELD.fixtures });
   }
 
   return issues;
@@ -143,7 +167,7 @@ export function graphicChecks(team: Team, design: Design): Issue[] {
   const kind = design.kind;
   const issues: Issue[] = [];
   const byId = new Map(team.players.map((p) => [p.id, p]));
-  const name = (id: string) => byId.get(id)?.name.trim() || "A player";
+  const name = (id: string) => byId.get(id)?.name.trim() ?? "";
   const hasLineup = team.lineup.starters.some(Boolean);
 
   if (hasLineup && (kind === "goal" || kind === "result" || kind === "halftime")) {
@@ -152,7 +176,8 @@ export function graphicChecks(team: Team, design: Design): Issue[] {
       const p = scorerOf(team, g);
       if (!p || wasOn(p.id, minuteOf(g.minute))) continue;
       issues.push({
-        message: `${p.name} scored${g.minute ? ` at ${g.minute}′` : ""} but wasn't on the pitch`,
+        code: g.minute ? "scorerOff" : "scorerOffNoMinute",
+        values: { name: p.name.trim(), minute: g.minute },
         panel: "match",
         field: FIELD.scorer(g.id),
         soft: true,
@@ -166,14 +191,16 @@ export function graphicChecks(team: Team, design: Design): Issue[] {
     for (const s of sorted) {
       if (s.onId && on.has(s.onId))
         issues.push({
-          message: `${name(s.onId)} comes on but is already playing`,
+          code: "onAlready",
+          values: { name: name(s.onId) },
           panel: "match",
           field: FIELD.subs,
           soft: true,
         });
       if (s.offId && !on.has(s.offId))
         issues.push({
-          message: `${name(s.offId)} goes off but wasn't on the pitch`,
+          code: "offNotOn",
+          values: { name: name(s.offId) },
           panel: "match",
           field: FIELD.subs,
           soft: true,
@@ -187,7 +214,8 @@ export function graphicChecks(team: Team, design: Design): Issue[] {
     const p = m.motmId ? byId.get(m.motmId) : undefined;
     if (p && !p.number.trim())
       issues.push({
-        message: `${p.name || "The player of the match"} has no shirt number`,
+        code: p.name.trim() ? "noNumber" : "noNumberMotm",
+        values: { name: p.name.trim() },
         panel: "squad",
         soft: true,
       });

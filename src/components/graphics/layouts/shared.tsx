@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { textFor } from "@/lib/graphicText";
 import { contrast } from "@/lib/color";
 import { displayName, formatMatchDate, initials } from "@/lib/format";
 import { matchScore, scorerLabel, spotlightGoal } from "@/lib/score";
@@ -106,7 +107,7 @@ export function facts(team: Team, half = false): MatchFacts {
     home,
     away,
     versus: !!m.opponent.trim(),
-    date: formatMatchDate(m.date),
+    date: formatMatchDate(m.date, team.language),
     kickoff: m.kickoff,
     venue: m.venue,
     competition: m.competition,
@@ -181,7 +182,7 @@ export function starterRows(team: Team, design: Design): ListRow[] {
     .map((s) => ({
       id: s.player!.id,
       number: s.player!.number,
-      name: displayName(s.player!, design.nameStyle),
+      name: displayName(s.player!, design.nameStyle, team.language),
       captain: design.showCaptain && team.lineup.captainId === s.player!.id,
     }));
 }
@@ -189,16 +190,18 @@ export function starterRows(team: Team, design: Design): ListRow[] {
 export function benchNames(team: Team, design: Design): string[] {
   if (!design.showSubs) return [];
   return benchPlayers(team).map(
-    (p) => `${design.showNumbers ? `${p.number} ` : ""}${displayName(p, design.nameStyle)}`,
+    (p) =>
+      `${design.showNumbers ? `${p.number} ` : ""}${displayName(p, design.nameStyle, team.language)}`,
   );
 }
 
-/** "vs Corrin Town" or "at Corrin Town"; empty without an opponent. */
+/** "vs Corrin Town" or "at Corrin Town" ("mod …" / "ude mod …"); empty without an opponent. */
 export function versusLine(team: Team, short = false): string {
   const m = team.match;
   if (!m.opponent.trim()) return "";
   const name = short ? m.opponentShort.trim() || initials(m.opponent) : m.opponent;
-  return `${m.isHome ? "vs" : "at"} ${name}`;
+  const t = textFor(team);
+  return `${m.isHome ? t.vs : t.at} ${name}`;
 }
 
 /** A club name set to fit: one or two lines, all of a pair at the same size. */

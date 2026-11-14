@@ -1,0 +1,123 @@
+{
+  "title": "Opret klub",
+  "screenTitle": "OPRET KLUB",
+  "steps": {
+    "name": "Navn",
+    "crest": "Klublogo",
+    "kit": "Spilledragt",
+    "squad": "Trup"
+  },
+  "progress": "Trin {step} af {total}",
+  "back": "Tilbage",
+  "skip": "Spring over",
+  "continue": "Videre",
+  "open": "Åbn studiet",
+  "yourClub": "Din klub",
+  "myClub": "Min klub",
+  "previewFile": "Forhåndsvisning: kampdag.png",
+  "sample": {
+    "opponent": "Kildebakken IF",
+    "opponentShort": "Kildebakken",
+    "competition": "Serie 3"
+  },
+  "name": {
+    "title": "Hvad hedder din klub?",
+    "hint": "Tilskuerne staver navnet. Det står også på dine kampgrafikker, og forkortelsen kommer på dit skjold.",
+    "label": "Klubnavn",
+    "placeholder": "fx Bakkely IF",
+    "short": "Forkortelse",
+    "note": "Dit skjold, indtil du tilføjer et klublogo. Farverne kommer lige om lidt.",
+    "noteDbu": "Klublogoet fra DBU. Du kan skifte det i næste trin."
+  },
+  "crest": {
+    "title": "Tilføj dit klublogo",
+    "hint": "Det kommer på alle grafikker. En fritlagt PNG står direkte på dine farver, og et logo på en hvid firkant får en pæn plade. Spring over, så bruger vi et skjold med dine forbogstaver.",
+    "plate": "Det ligger på en firkant og får derfor en plade. Fjern baggrunden, så forsvinder pladen.",
+    "sharp": "Flot. Sådan står det på alle grafikker.",
+    "none": "Uden klublogo kommer dine forbogstaver på et skjold i dine farver."
+  },
+  "kit": {
+    "title": "Hvad spiller I i?",
+    "hint": "Vælg den spilledragt, der ligner mest, og se tilskuerne skifte farve. Finjustér farverne nedenfor.",
+    "label": "Spilledragt",
+    "yours": "Dine farver",
+    "main": "Hovedfarve",
+    "second": "Anden farve",
+    "pattern": "Mønster"
+  },
+  "squad": {
+    "title": "Hvem er i truppen?",
+    "hint": "Indsæt den fra holdets chat, beskeder og det hele. Numre, positioner, (A) for anføreren og en linje med »Udskiftere:« bliver fundet, og snakken bliver sorteret fra.",
+    "perSide": "Spillere på banen",
+    "aSide": "{count}-mands",
+    "label": "Trupliste",
+    "placeholder": "1 Mads Holm MM\n4 Jonas Riis FS\n10 Kasper Lund MB\n9 Oliver Dam AN\nUdskiftere: Bech, Krogh"
+  },
+  "ticker": {
+    "kickoff": "KAMPSTART. GOD KAMP, {club}",
+    "welcome": "VELKOMMEN TIL {club}",
+    "askName": "HVAD HEDDER DIN KLUB?",
+    "sharp": "FLOT LOGO",
+    "askCrest": "VIS OS DIT KLUBLOGO",
+    "askKit": "HVAD SPILLER I I?",
+    "players": "{count} SPILLERE I TRUPPEN",
+    "askSquad": "HVEM ER I TRUPPEN?"
+  },
+  "boards": {
+    "free": "ALTID GRATIS",
+    "noWatermark": "INTET VANDMÆRKE",
+    "noSignup": "UDEN KONTO"
+  },
+  "kits": {
+    "red-white": "Rød og hvid",
+    "royal": "Kongeblå og hvid",
+    "black-white": "Sort og hvid",
+    "green-white": "Grøn og hvid",
+    "claret-sky": "Bordeaux og lyseblå",
+    "tangerine": "Orange og sort",
+    "navy-gold": "Marineblå og guld",
+    "sky-navy": "Lyseblå og marineblå",
+    "amber-black": "Gul og sort",
+    "maroon-white": "Vinrød og hvid"
+  },
+  "trims": {
+    "white": "Hvid",
+    "black": "Sort",
+    "gold": "Guld",
+    "best": "Bedste kontrast"
+  },
+  "kitWarning": "De to farver ligger meget tæt på hinanden, så navne og numre på dine grafikker bliver svære at læse. Vælg en kontrastfarve som anden farve:",
+  "read": {
+    "none": "Ingen spillere endnu. Du kan også tilføje dem senere.",
+    "found": "{count, plural, one {# spiller fundet.} other {# spillere fundet.}}",
+    "benched": "{count} på listen over udskiftere starter på bænken, og resten kommer på deres positioner.",
+    "fill": "De kommer på deres positioner, og resten starter på bænken.",
+    "guessed": "{count} uden position fylder hullerne i listens rækkefølge.",
+    "chat": "{count, plural, one {# chatlinje sorteret fra.} other {# chatlinjer sorteret fra.}}",
+    "warnings": "{count, plural, one {# linje skal lige tjekkes} other {# linjer skal lige tjekkes}}",
+    "captain": "Anfører",
+    "captainLetter": "A",
+    "noPosition": "Ingen position angivet",
+    "leftOut": "Sorteret fra ({count})",
+    "isPlayer": "Det er en spiller",
+    "ignored": {
+      "noName": "Der er intet navn",
+      "message": "Ligner en besked",
+      "time": "Der står et klokkeslæt",
+      "tooLong": "For langt til at være et navn",
+      "notPlayer": "Ikke en spiller",
+      "benchHeading": "Overskrift: herefter kommer bænken",
+      "startersHeading": "Overskrift: herefter kommer startopstillingen"
+    },
+    "warning": {
+      "sameName": "Samme navn som nr. {other} på listen",
+      "sameNumber": "Trøjenummer {number} er brugt to gange"
+    }
+  },
+  "header": {
+    "haveAccount": "Har du allerede en konto?",
+    "signIn": "Log ind",
+    "example": "Prøv eksempelklubben",
+    "cancel": "Annuller"
+  }
+}

@@ -1,5 +1,6 @@
 import { ArrowFatDownIcon, ArrowFatUpIcon } from "@phosphor-icons/react/ssr";
-import { displayName, formatMatchDate } from "@/lib/format";
+import { subsHeadline, textFor } from "@/lib/graphicText";
+import { displayName, matchDateParts } from "@/lib/format";
 import { scorerLabel, scorerOf, spotlightGoal } from "@/lib/score";
 import type { Design, Player, Team } from "@/lib/types";
 import { fitNames, sides } from "./Fixture";
@@ -238,16 +239,16 @@ export function SubsGraphic({ team, design, theme }: Props) {
   // A row just added in the studio has nobody in it yet; it doesn't print.
   const subs = team.match.subs.filter((s) => s.onId || s.offId).slice(0, 5);
   // The default heading follows the count; a custom one is left alone.
-  const headline =
-    subs.length === 1 && design.headlines.subs === "Substitutions"
-      ? "Substitution"
-      : design.headlines.subs;
+  const headline = subsHeadline(design, team, subs.length);
   // Rows shrink until the longest name fits beside the minute, arrow and number.
   const colW = (design.featureImage ? (wide ? 0.55 : 0.62) : 1) * (theme.right - theme.pad);
   const longest = subs
     .flatMap((s) => [s.onId, s.offId])
     .map((id) => (id ? byId.get(id) : undefined))
-    .reduce((n, p) => Math.max(n, p ? displayName(p, design.nameStyle).length : 0), 0);
+    .reduce(
+      (n, p) => Math.max(n, p ? displayName(p, design.nameStyle, team.language).length : 0),
+      0,
+    );
   const fixed = 1.9 + 0.7 + 0.35 + (design.showNumbers ? 1.55 : 0);
   const rowSize = Math.min(
     (subs.length <= 2 ? 100 : subs.length <= 3 ? 72 : 54) * u * (tall ? 1.5 : wide ? 0.85 : 1),
@@ -273,7 +274,7 @@ export function SubsGraphic({ team, design, theme }: Props) {
         </span>
       )}
       <span style={{ color: on ? theme.fg : theme.muted }}>
-        {p ? displayName(p, design.nameStyle) : ""}
+        {p ? displayName(p, design.nameStyle, team.language) : ""}
       </span>
     </div>
   );
@@ -477,11 +478,22 @@ export function FixturesGraphic({ team, design, theme }: Props) {
   const badgeW = badge * 1.9;
   const compSize = floor;
   const all = fixtureRows(team);
+  const t = textFor(team);
+  // The widest weekday and date the rows can print, in the club's language.
+  const dates = all.map((f) => matchDateParts(f.date, team.language));
+  const widest = (texts: string[]) =>
+    texts.reduce((a, b) => (textUnits(b) > textUnits(a) ? b : a), "");
+  const sampleDate = matchDateParts("2026-11-28", team.language);
+  const longWeekday = widest([sampleDate?.weekday ?? "", ...dates.map((d) => d?.weekday ?? "")]);
+  const longDate = widest([
+    `${sampleDate?.day} ${sampleDate?.month}`,
+    ...dates.map((d) => (d ? `${d.day} ${d.month}` : "")),
+  ]);
   let dateSize = px(theme, base * 0.3);
   let kickSize = px(theme, base * 0.34);
   const dateW = Math.max(
-    textUnits("28 NOV") * glyph * dateSize,
-    textUnits("SAT") * glyph * weekdaySize,
+    textUnits(longDate.toUpperCase()) * glyph * dateSize,
+    textUnits(longWeekday.toUpperCase()) * glyph * weekdaySize,
   );
   const kickW = textUnits("15:00") * glyph * kickSize;
   const gap = 22 * u;
@@ -490,7 +502,7 @@ export function FixturesGraphic({ team, design, theme }: Props) {
   // Opponents: one line where it reads, else two balanced lines, never tiny.
   const oppMax = base * 0.42;
   const plan = all.map((f) => {
-    const name = f.opponent || "Opponent";
+    const name = f.opponent || t.opponent;
     const one = fitText(name, oppW, oppMax, theme);
     const split = balance(name);
     const two =
@@ -554,7 +566,9 @@ export function FixturesGraphic({ team, design, theme }: Props) {
       >
         {shown.map((idx, i) => {
           const f = all[idx];
-          const [weekday, ...rest] = formatMatchDate(f.date).split(" ");
+          const parts = dates[idx];
+          const weekday = parts?.weekday ?? "";
+          const rest = parts ? [parts.day, parts.month] : [f.date];
           return (
             <div
               key={f.id}
@@ -592,7 +606,7 @@ export function FixturesGraphic({ team, design, theme }: Props) {
                   fontWeight: theme.font.heavy,
                 }}
               >
-                {f.isHome ? "H" : "A"}
+                {f.isHome ? t.homeLetter : t.awayLetter}
               </span>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 * u, minWidth: 0 }}>
                 <span

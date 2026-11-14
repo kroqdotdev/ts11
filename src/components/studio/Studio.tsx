@@ -13,6 +13,7 @@ import {
   XIcon,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type FocusEvent, type ReactNode } from "react";
 import { FORMATS } from "@/components/graphics/theme";
 import { AccountButton } from "@/components/account/AccountButton";
@@ -20,6 +21,7 @@ import { AuthDialog } from "@/components/account/AuthDialog";
 import { AuthToasts } from "@/components/account/AuthToasts";
 import { SyncChip } from "@/components/account/SyncChip";
 import { VerifyBanner } from "@/components/account/VerifyBanner";
+import { LocaleSwitch } from "@/components/i18n/LocaleSwitch";
 import { Segmented } from "@/components/ui/controls";
 import { Wordmark } from "@/components/Wordmark";
 import { useActiveTeam, useHydrated, useStudio, useUi, type PanelId } from "@/lib/store";
@@ -36,28 +38,24 @@ import { PixelWipe } from "./PixelWipe";
 import { TeamMenu } from "./TeamMenu";
 import { TemplateRail } from "./TemplateRail";
 
-const PANELS: { value: PanelId; label: string; icon: ReactNode; body: ReactNode }[] = [
+const PANELS: { value: PanelId; icon: ReactNode; body: ReactNode }[] = [
   {
     value: "lineup",
-    label: "Line-up",
     icon: <ListNumbersIcon size={20} weight="bold" />,
     body: <LineupPanel />,
   },
   {
     value: "squad",
-    label: "Squad",
     icon: <UsersThreeIcon size={20} weight="bold" />,
     body: <SquadPanel />,
   },
   {
     value: "match",
-    label: "Match",
     icon: <SoccerBallIcon size={20} weight="bold" />,
     body: <MatchPanel />,
   },
   {
     value: "design",
-    label: "Design",
     icon: <PaintBrushIcon size={20} weight="bold" />,
     body: <DesignPanel />,
   },
@@ -65,6 +63,7 @@ const PANELS: { value: PanelId; label: string; icon: ReactNode; body: ReactNode 
 
 /** Keyboard shortcuts past the panel, which can hold dozens of controls. */
 function SkipLinks() {
+  const t = useTranslations("studio.skip");
   const link =
     "pointer-events-none absolute top-2 left-2 z-[60] -translate-y-16 rounded-[4px] border-2 border-card-ink bg-card px-3 py-2 text-sm font-semibold text-card-ink opacity-0 shadow-[3px_3px_0_var(--card-ink)] focus:pointer-events-auto focus:translate-y-0 focus:opacity-100";
   /** The export button that is on screen (header on desktop, bottom bar on phones). */
@@ -76,18 +75,18 @@ function SkipLinks() {
     visible?.focus();
   }
   return (
-    <nav aria-label="Skip links">
+    <nav aria-label={t("label")}>
       <a href="#studio-panel" className={link}>
-        Skip to the editing panel
+        {t("panel")}
       </a>
       <a href="#studio-graphics" className={link}>
-        Skip to the graphic picker
+        {t("graphics")}
       </a>
       <a href="#studio-preview" className={link}>
-        Skip to the preview
+        {t("preview")}
       </a>
       <a href="#studio-export" onClick={toExport} className={link}>
-        Skip to download
+        {t("export")}
       </a>
     </nav>
   );
@@ -116,17 +115,19 @@ function useTyping() {
 function FormatPicker() {
   const format = useStudio((s) => s.design.format);
   const updateDesign = useStudio((s) => s.updateDesign);
+  const t = useTranslations("studio");
+  const n = useFormatter().number;
   return (
     <Segmented<FormatId>
-      label="Size"
+      label={t("size")}
       value={format}
       onChange={(f) => updateDesign({ format: f })}
       options={(Object.keys(FORMATS) as FormatId[]).map((f) => ({
         value: f,
-        title: `${FORMATS[f].w} × ${FORMATS[f].h}`,
+        title: `${n(FORMATS[f].w)} × ${n(FORMATS[f].h)}`,
         label: (
           <>
-            <span>{FORMATS[f].label}</span>
+            <span>{t(`formats.${f}`)}</span>
             <span className="text-[11px] tabular-nums opacity-60">{FORMATS[f].ratio}</span>
           </>
         ),
@@ -146,6 +147,7 @@ export function Studio() {
   const [fullscreen, setFullscreen] = useState(false);
   const { typing, onFocus, onBlur } = useTyping();
   const previewRef = usePreviewHeight();
+  const t = useTranslations("studio");
   const inSetup = !onboarded || setupOpen;
   // Leaving the club setup (a long page on phones) must land at the top of the studio,
   // not wherever the "Open the studio" button was scrolled to.
@@ -170,6 +172,7 @@ export function Studio() {
         </div>
         <div className="ml-auto flex items-center gap-2 lg:gap-3">
           <SyncChip />
+          <LocaleSwitch tone="chalk" />
           <AccountButton />
           <div id="studio-export" className="hidden lg:block">
             <ExportControls />
@@ -191,7 +194,7 @@ export function Studio() {
         <aside
           id="studio-panel"
           tabIndex={-1}
-          aria-label="Edit"
+          aria-label={t("panels.label")}
           onFocus={onFocus}
           onBlur={onBlur}
           className="studio-panel order-4 flex min-h-0 flex-col border-card-ink bg-paper outline-none lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:border-t-2 lg:border-r-2 xl:row-span-1"
@@ -212,7 +215,15 @@ export function Studio() {
                     <span aria-hidden className="lg:hidden">
                       {p.icon}
                     </span>
-                    {p.label}
+                    {p.value === "lineup" ? (
+                      // Phones: a shorter word, so the four tabs and the export button fit.
+                      <>
+                        <span className="lg:hidden">{t("panels.lineupShort")}</span>
+                        <span className="max-lg:hidden">{t("panels.lineup")}</span>
+                      </>
+                    ) : (
+                      t(`panels.${p.value}`)
+                    )}
                   </Tabs.Tab>
                 ))}
               </Tabs.List>
@@ -244,7 +255,7 @@ export function Studio() {
           id="studio-preview"
           ref={previewRef}
           tabIndex={-1}
-          aria-label="Preview"
+          aria-label={t("preview.label")}
           className={clsx(
             "pixel-stage sticky top-0 z-20 order-2 flex min-w-0 flex-col gap-3 border-b-2 border-card-ink p-3 transition-[height] duration-300 ease-out-quint outline-none lg:static lg:order-none lg:col-start-2 lg:row-start-2 lg:h-auto lg:min-h-0 lg:gap-3 lg:border-b-0 lg:px-6 lg:pt-6 lg:pb-4 xl:row-start-1 xl:border-t-2",
             PREVIEW_H[height],
@@ -256,7 +267,7 @@ export function Studio() {
           {/* Phones: the preview's own controls sit in a strip under it, never on the artwork. */}
           <div className="-mt-1 flex shrink-0 items-center justify-end gap-1.5 lg:hidden">
             <PreviewButton
-              label={height === "mini" ? "Show the preview" : "Shrink the preview"}
+              label={height === "mini" ? t("preview.show") : t("preview.shrink")}
               onClick={() => setPreview(height === "mini" ? "normal" : "mini")}
             >
               {height === "mini" ? (
@@ -265,7 +276,7 @@ export function Studio() {
                 <CaretUpIcon size={18} weight="bold" />
               )}
             </PreviewButton>
-            <PreviewButton label="Full screen preview" onClick={() => setFullscreen(true)}>
+            <PreviewButton label={t("preview.fullscreen")} onClick={() => setFullscreen(true)}>
               <ArrowsOutIcon size={18} />
             </PreviewButton>
           </div>
@@ -288,7 +299,8 @@ export function Studio() {
 /** The page's heading for screen readers; the wordmark and club menu are the visible ones. */
 function StudioHeading() {
   const team = useActiveTeam();
-  return <h1 className="sr-only">Studio: {team.name || "your club"}</h1>;
+  const t = useTranslations("studio");
+  return <h1 className="sr-only">{t("heading", { club: team.name || t("yourClub") })}</h1>;
 }
 
 /**
@@ -333,19 +345,20 @@ function FullscreenPreview({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("studio.preview");
   return (
     <BaseDialog.Root open={open} onOpenChange={onOpenChange}>
       <BaseDialog.Portal>
         <BaseDialog.Popup
-          aria-label="Full screen preview"
+          aria-label={t("fullscreen")}
           className="pixel-stage fixed inset-0 z-50 flex flex-col transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0"
         >
           <div className="flex h-14 shrink-0 items-center justify-between border-b-2 border-card-ink bg-grass-deep px-3 pt-[env(safe-area-inset-top)]">
             <BaseDialog.Title className="font-signage text-[22px] leading-none text-chalk">
-              Preview
+              {t("label")}
             </BaseDialog.Title>
             <BaseDialog.Close
-              aria-label="Close the full screen preview"
+              aria-label={t("close")}
               className="grid size-11 place-items-center rounded-[4px] border-2 border-card-ink bg-paper text-ink shadow-[3px_3px_0_var(--card-ink)]"
             >
               <XIcon size={20} weight="bold" />

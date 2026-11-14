@@ -1,12 +1,15 @@
+"use client";
+
 import { WarningIcon } from "@phosphor-icons/react";
+import { useTranslations } from "next-intl";
 import { contrast, readableOn } from "@/lib/color";
 import type { Colors } from "@/lib/types";
 
 const TRIMS = [
-  { label: "White", hex: "#f7f7f4" },
-  { label: "Black", hex: "#111418" },
-  { label: "Gold", hex: "#e9b62c" },
-];
+  { id: "white", hex: "#f7f7f4" },
+  { id: "black", hex: "#111418" },
+  { id: "gold", hex: "#e9b62c" },
+] as const;
 
 /**
  * Shown wherever kit colours are picked, when the two are too alike to read on each
@@ -20,13 +23,14 @@ export function KitWarning({
   /** Sets the second colour; the trim buttons only show when this is given. */
   onSecondary?: (hex: string) => void;
 }) {
+  const t = useTranslations("setup");
   if (contrast(colors.primary, colors.secondary) >= 1.6) return null;
   const best = readableOn(colors.primary);
   const options = [
-    ...TRIMS.filter((t) => contrast(t.hex, colors.primary) >= 2.2),
+    ...TRIMS.filter((trim) => contrast(trim.hex, colors.primary) >= 2.2),
     // The plainest readable trim leads when the presets don't suit this kit.
-    { label: "Best contrast", hex: best },
-  ].filter((t, i, all) => all.findIndex((o) => o.hex === t.hex) === i);
+    { id: "best" as const, hex: best },
+  ].filter((trim, i, all) => all.findIndex((o) => o.hex === trim.hex) === i);
   return (
     <div
       role="status"
@@ -34,24 +38,23 @@ export function KitWarning({
     >
       <p className="flex items-start gap-2">
         <WarningIcon size={16} weight="bold" className="mt-px shrink-0" aria-hidden />
-        These two colours are very close, so names and numbers on your graphics will be hard to
-        read. Pick a trim colour for the second one:
+        {t("kitWarning")}
       </p>
       {onSecondary && (
         <div className="flex flex-wrap gap-1.5 pl-6">
-          {options.map((t) => (
+          {options.map((trim) => (
             <button
-              key={t.label}
+              key={trim.id}
               type="button"
-              onClick={() => onSecondary(t.hex)}
+              onClick={() => onSecondary(trim.hex)}
               className="flex h-9 items-center gap-1.5 rounded-[3px] border-2 border-card-ink bg-paper px-2 text-[13px] font-semibold text-ink shadow-[2px_2px_0_var(--card-ink)] hover:-translate-y-px active:translate-y-0 active:shadow-none"
             >
               <span
                 aria-hidden
                 className="size-4 rounded-[2px] border border-card-ink/60"
-                style={{ background: t.hex }}
+                style={{ background: trim.hex }}
               />
-              {t.label}
+              {t(`trims.${trim.id}`)}
             </button>
           ))}
         </div>

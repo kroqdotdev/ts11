@@ -1,0 +1,104 @@
+{
+  "cta": "Make your team sheet",
+  "openClub": "Open {name}",
+  "wordmark": "{app} home",
+  "hero": {
+    "title": "Your XI, in your colours.",
+    "lead": "Free line-up, matchday and full-time graphics for your club. Pick a kit, type the names, post it before kick-off.",
+    "tryExample": "Try the example club",
+    "backToStands": "Back to the stands",
+    "kitPicker": "Try a kit",
+    "ownKit": "Your kit",
+    "ownKitLabel": "{club}: your kit",
+    "tryKit": "Try {kit}",
+    "clubKit": "{club}: {kit}",
+    "ticker": "FREE MATCHDAY GRAPHICS FOR YOUR CLUB - PICK A KIT AND WATCH THE CROWD",
+    "welcomeBack": "WELCOME BACK, {club}",
+    "boards": {
+      "free": "FREE FOREVER",
+      "watermark": "NO WATERMARK",
+      "signUp": "NO SIGN-UP"
+    }
+  },
+  "reel": {
+    "title": "Nine graphics, ninety minutes.",
+    "lead": "From the night before to the Monday after. Each one uses your squad, your colours and your crest, so it takes a minute, not an evening.",
+    "earlier": "Earlier graphics",
+    "later": "Later graphics",
+    "clock": {
+      "dayBefore": "-1 DAY",
+      "hourBefore": "-1 HR",
+      "monday": "MON"
+    },
+    "fixture": {
+      "file": "matchday.png",
+      "title": "Matchday",
+      "body": "Opponent, kick-off and venue."
+    },
+    "lineup": {
+      "file": "starting-xi.png",
+      "title": "Starting XI",
+      "body": "Numbers, names and the bench."
+    },
+    "pitch": {
+      "file": "team-news.png",
+      "title": "Team news",
+      "body": "Your shape, dragged into place."
+    },
+    "goal": {
+      "file": "goal.png",
+      "title": "Goal",
+      "body": "Scorer, minute and the score."
+    },
+    "halftime": {
+      "file": "half-time.png",
+      "title": "Half time",
+      "body": "The score at the break."
+    },
+    "subs": {
+      "file": "subs.png",
+      "title": "Substitutions",
+      "body": "Who came on, who went off."
+    },
+    "result": {
+      "file": "full-time.png",
+      "title": "Full time",
+      "body": "Final score and every scorer."
+    },
+    "motm": {
+      "file": "player-of-the-match.png",
+      "title": "Player of the match",
+      "body": "Your standout, in lights."
+    },
+    "fixtures": {
+      "file": "fixtures.png",
+      "title": "Fixtures",
+      "body": "The next four games, or results."
+    }
+  },
+  "setup": {
+    "title": "Set up once. Done by kick‑off.",
+    "lead": "Name, crest, colours and squad, in a stadium that fills up as you go. After that, every graphic is ready. Next week, pick the line-up and post."
+  },
+  "sheet": {
+    "title": "Team sheet",
+    "price": "Price",
+    "priceValue": "Free, every graphic",
+    "signUp": "Sign-up",
+    "signUpValue": "Not needed",
+    "watermark": "Watermark",
+    "watermarkValue": "None",
+    "kept": "Your squad is kept",
+    "keptValue": "On this device",
+    "exports": "Exports",
+    "exportsValue": "PNG, ready for every feed",
+    "signed": "Signed, every club secretary who has done this in a spreadsheet at midnight."
+  },
+  "footer": {
+    "tagline": "Free match day graphics for grassroots and semi-pro clubs.",
+    "nav": "More",
+    "source": "Source code",
+    "privacy": "Privacy",
+    "account": "Your account"
+  }
+}
