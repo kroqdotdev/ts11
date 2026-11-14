@@ -442,8 +442,11 @@ export function autoLineup(
   players: (Player & { captain?: boolean; positioned?: boolean; section?: Section | null })[],
   size: TeamSize,
   captainId: string | null = null,
+  /** Keep this formation when it suits the size; otherwise the size's first. */
+  preferred?: string,
 ): Lineup {
-  const formation = FORMATIONS[size][0];
+  const formation =
+    preferred && FORMATIONS[size].includes(preferred) ? preferred : FORMATIONS[size][0];
   const slots = formationSlots(formation, size);
   const starters: (string | null)[] = slots.map(() => null);
   const used = new Set<string>();

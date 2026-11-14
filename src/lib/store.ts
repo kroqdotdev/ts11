@@ -5,14 +5,24 @@ import { useEffect, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
+import {
+  findPlayerByName,
+  matchFromFixture,
+  mergeFixtures,
+  type DbuMatchPlan,
+  type DbuSheetPlayer,
+} from "./dbu";
 import { blankTeam, defaultDesign, defaultMatch, demoTeam } from "./demo";
-import { FORMATIONS, formationSlots } from "./formation";
+import { FORMATIONS, formationSlots, TEAM_SIZES } from "./formation";
 import { pageLanguage } from "./language";
 import { uid } from "./id";
+import { firstHalfGoals } from "./score";
+import { autoLineup } from "./squad";
 import daUi from "../../messages/da/ui.json";
 import enUi from "../../messages/en/ui.json";
 import type {
   BackgroundPhoto,
+  DbuLink,
   Fixture,
   Substitution,
   Design,
@@ -82,6 +92,28 @@ interface Actions {
   addFixture: () => void;
   updateFixture: (id: string, patch: Partial<Fixture>) => void;
   removeFixture: (id: string) => void;
+  /**
+   * Adds fixtures imported from DBU to a team (the one the import was started for, which
+   * may no longer be the active one) and remembers where they came from. Fixtures
+   * already there are refreshed in place (see `mergeFixtures`). A team that has gone
+   * in the meantime gets nothing.
+   */
+  importFixtures: (
+    teamId: string,
+    link: DbuLink,
+    fixtures: Fixture[],
+    extra?: Partial<Pick<Team, "crest" | "crestKind">>,
+  ) => { added: number; updated: number };
+  /** Sets a team's match graphics (the active team's by default) from one of its fixtures. */
+  playFixture: (id: string, teamId?: string) => void;
+  /**
+   * Fills the match in from DBU's match page: the score and goals, the line-up from
+   * the holdkort (adding players the squad doesn't have yet), and substitutions.
+   */
+  applyDbuMatch: (
+    plan: DbuMatchPlan,
+    parts: { score: boolean; lineup: boolean; subs: boolean },
+  ) => void;
   addSub: () => void;
   updateSub: (id: string, patch: Partial<Substitution>) => void;
   removeSub: (id: string) => void;
@@ -187,6 +219,8 @@ export const useStudio = create<StudioState>()(
       /** Applies `fn` to the active team. */
       const withTeam = (fn: (team: Team) => Team) =>
         set((s) => ({ teams: s.teams.map((t) => (t.id === s.activeTeamId ? fn(t) : t)) }));
+      const withTeamId = (id: string, fn: (team: Team) => Team) =>
+        set((s) => ({ teams: s.teams.map((t) => (t.id === id ? fn(t) : t)) }));
       const withLineup = (fn: (lineup: Lineup, team: Team) => Lineup) =>
         withTeam((t) => ({ ...t, lineup: fn(t.lineup, t) }));
 
@@ -433,6 +467,105 @@ export const useStudio = create<StudioState>()(
           })),
         removeFixture: (id) =>
           withTeam((t) => ({ ...t, fixtures: t.fixtures.filter((f) => f.id !== id) })),
+        importFixtures: (teamId, link, incoming, extra = {}) => {
+          let counts = { added: 0, updated: 0 };
+          withTeamId(teamId, (t) => {
+            const { fixtures, added, updated } = mergeFixtures(t.fixtures, incoming);
+            counts = { added, updated };
+            return { ...t, ...extra, fixtures, dbu: link };
+          });
+          return counts;
+        },
+        applyDbuMatch: (plan, parts) =>
+          withTeam((t) => {
+            let players = t.players;
+            let lineup = t.lineup;
+            if ((parts.lineup || parts.subs) && plan.sheet) {
+              // Each holdkort entry gets its squad player, or a new one.
+              const added: Player[] = [];
+              const playerFor = (sp: DbuSheetPlayer): Player => {
+                const known = findPlayerByName(t.players, sp.name);
+                if (known) return known;
+                const fresh: Player = {
+                  id: uid(),
+                  name: sp.name,
+                  number: sp.number,
+                  position: "MF",
+                };
+                added.push(fresh);
+                return fresh;
+              };
+              const starters = plan.sheet.starters.map(playerFor);
+              const bench = plan.sheet.bench.map(playerFor);
+              players = [...t.players, ...added];
+              if (parts.lineup) {
+                const seen = new Set<string>();
+                const list = [
+                  ...starters.map((p) => ({ p, section: "starters" as const })),
+                  ...bench.map((p) => ({ p, section: "bench" as const })),
+                ]
+                  .filter(({ p }) => !seen.has(p.id) && !!seen.add(p.id))
+                  // Positions are only known for players already in the squad.
+                  .map(({ p, section }) => ({ ...p, section, positioned: !added.includes(p) }));
+                const size = TEAM_SIZES.find((n) => n === starters.length) ?? t.lineup.size;
+                const captain = starters.some((p) => p.id === t.lineup.captainId)
+                  ? t.lineup.captainId
+                  : null;
+                lineup = autoLineup(list, size, captain, t.lineup.formation);
+              }
+            }
+            let match = t.match;
+            if (parts.score) {
+              const goals = plan.goals.map((g) =>
+                g.side === "us" && !g.playerId && g.name
+                  ? { ...g, playerId: findPlayerByName(players, g.name)?.id ?? null }
+                  : g,
+              );
+              // Counted from the goals only when that gives DBU's score at full time and
+              // at half time. The minutes put a goal before or after the break; DBU's
+              // timeline marks the break itself, and the two can disagree (a stoppage-time
+              // goal written as "46", halves shorter than 45 minutes). Then DBU's scores
+              // are typed in, so the graphics print what DBU says.
+              const byMinutes = firstHalfGoals(goals);
+              const htAddsUp =
+                !plan.halfTime ||
+                (byMinutes.filter((g) => g.side === "us").length === plan.halfTime.us &&
+                  byMinutes.filter((g) => g.side === "them").length === plan.halfTime.them);
+              const auto = !plan.score || (plan.goalsAddUp && htAddsUp);
+              match = {
+                ...match,
+                goals,
+                spotlightGoalId: null,
+                autoScore: auto,
+                ...(!auto && plan.score
+                  ? {
+                      ourScore: plan.score.us,
+                      theirScore: plan.score.them,
+                      ...(plan.halfTime
+                        ? { htOurScore: plan.halfTime.us, htTheirScore: plan.halfTime.them }
+                        : {}),
+                    }
+                  : {}),
+              };
+            }
+            if (parts.subs) {
+              const idOf = (name: string) =>
+                name ? (findPlayerByName(players, name)?.id ?? null) : null;
+              const subs = plan.subs
+                .map((s) => ({ id: uid(), minute: s.minute, onId: idOf(s.on), offId: idOf(s.off) }))
+                .filter((s) => s.onId || s.offId);
+              match = { ...match, subs };
+            }
+            return { ...t, players, lineup, match };
+          }),
+        playFixture: (id, teamId) => {
+          const play = (t: Team) => {
+            const f = t.fixtures.find((x) => x.id === id);
+            return f ? { ...t, match: matchFromFixture(t.match, f) } : t;
+          };
+          if (teamId) withTeamId(teamId, play);
+          else withTeam(play);
+        },
         addSub: () =>
           withTeam((t) => ({
             ...t,

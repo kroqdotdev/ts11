@@ -26,6 +26,7 @@
   "where": {
     "title": "Hvor oplysningerne ligger",
     "servers": "Hjemmesiden, databasen og de uploadede billeder ligger på Hetzners servere i Tyskland. E-mails fra kontoen bliver sendt gennem Amazon Web Services i Frankfurt i Tyskland. Begge handler kun efter vores instruks (de er vores databehandlere). Login med Google er omfattet af Googles egen privatlivspolitik.",
+    "dbu": "Hvis du henter en dansk klub fra DBU, slår vores server det klubnavn, du skriver, op på dbu.dk's offentlige resultatsider. DBU ser en forespørgsel fra vores server, ikke fra dig, og der bliver ikke sendt noget om dig.",
     "links": "Uploadede billeder kan åbnes af alle, der har det præcise link. Linkene er lange og tilfældige, men upload ikke noget privat."
   },
   "cookies": {

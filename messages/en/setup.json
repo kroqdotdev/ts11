@@ -26,7 +26,8 @@
     "label": "Club name",
     "placeholder": "e.g. Ashby Vale",
     "short": "Short name",
-    "note": "Your badge until you add a crest. Colours come next."
+    "note": "Your badge until you add a crest. Colours come next.",
+    "noteDbu": "Your crest from DBU. You can change it next."
   },
   "crest": {
     "title": "Add your crest",

@@ -1,9 +1,20 @@
 "use client";
 
-import { MinusIcon, PlusIcon, SoccerBallIcon, TrashIcon, XIcon } from "@phosphor-icons/react";
+import {
+  ArrowsClockwiseIcon,
+  DownloadSimpleIcon,
+  MinusIcon,
+  PlusIcon,
+  SoccerBallIcon,
+  TrashIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import clsx from "clsx";
-import { useTranslations } from "next-intl";
-import { Fragment, useId, type ReactNode } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { Fragment, useId, useState, type ReactNode } from "react";
+import { toast } from "sonner";
+import { DbuImportDialog } from "@/components/dbu/DbuImportDialog";
+import { DbuMatchButton } from "@/components/dbu/DbuMatchDialog";
 import {
   Button,
   Field,
@@ -15,7 +26,17 @@ import {
   TextInput,
 } from "@/components/ui/controls";
 import { ColorField, ImageField } from "@/components/ui/media";
-import { displayName, initials } from "@/lib/format";
+import { crestKindOf } from "@/lib/crest";
+import {
+  dbuErrorKey,
+  getDbuImport,
+  isSameGame,
+  matchIsBlank,
+  nextFixture,
+  toFixtures,
+  type DbuImport,
+} from "@/lib/dbu";
+import { displayName, formatMatchDate, initials } from "@/lib/format";
 import { FIELD } from "@/lib/issues";
 import {
   byMinute,
@@ -27,7 +48,7 @@ import {
 } from "@/lib/score";
 import { useActiveTeam, useStudio } from "@/lib/store";
 import { focusWhenReady } from "./fixIssue";
-import type { Goal, GraphicKind, Player } from "@/lib/types";
+import type { DbuLink, Fixture, Goal, GraphicKind, Language, Player, Team } from "@/lib/types";
 
 function Score({
   label,
@@ -228,6 +249,8 @@ export function MatchPanel() {
 
   const fixture = (
     <Section title={t("fixture")}>
+      <FromFixtures team={team} />
+      <DbuMatchButton kind="match" className="self-start" />
       <Segmented
         label={t("homeAway")}
         value={m.isHome ? "home" : "away"}
@@ -617,8 +640,9 @@ function MotmSection() {
 
 function FixturesSection() {
   const team = useActiveTeam();
-  const { addFixture, updateFixture, removeFixture } = useStudio.getState();
+  const { addFixture, updateFixture, removeFixture, playFixture } = useStudio.getState();
   const t = useTranslations("studio.match");
+  const tDbu = useTranslations("dbu.fixtures");
   return (
     <Section
       title={t("fixtures")}
@@ -640,6 +664,7 @@ function FixturesSection() {
       }
     >
       <p className="-mt-2 text-xs text-ink-soft">{t("fixturesNote")}</p>
+      <DbuTools team={team} />
       {team.fixtures.length === 0 ? (
         <p className="text-sm text-ink-soft">{t("noFixtures")}</p>
       ) : (
@@ -647,6 +672,13 @@ function FixturesSection() {
           {team.fixtures.map((f) => (
             <li key={f.id} className="flex flex-col gap-2 rounded-md bg-well p-3">
               <div className="flex items-end gap-2">
+                {f.opponentCrest && (
+                  <img
+                    src={f.opponentCrest}
+                    alt=""
+                    className="mb-1 size-8 shrink-0 object-contain"
+                  />
+                )}
                 <TextField
                   id={fixtureFieldId(f.id)}
                   label={t("opponent")}
@@ -701,10 +733,151 @@ function FixturesSection() {
                   onChange={(score) => updateFixture(f.id, { score })}
                 />
               </div>
+              {f.opponent.trim() && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="self-start"
+                  onClick={() => {
+                    playFixture(f.id);
+                    toast.success(tDbu("used", { opponent: f.opponent }));
+                  }}
+                >
+                  <SoccerBallIcon size={14} />
+                  {tDbu("useForMatch")}
+                </Button>
+              )}
             </li>
           ))}
         </ul>
       )}
     </Section>
+  );
+}
+
+/** Fill the match in from a fixture: the next one on match day, or a played one for its result. */
+function FromFixtures({ team }: { team: Team }) {
+  const playFixture = useStudio((s) => s.playFixture);
+  const t = useTranslations("dbu.fixtures");
+  const language: Language = useLocale() === "da" ? "da" : "en";
+  const m = team.match;
+  const label = (f: Fixture) =>
+    [
+      f.date && `${formatMatchDate(f.date, language)} ·`,
+      f.opponent,
+      `(${f.isHome ? t("home") : t("away")})`,
+      f.score.trim(),
+    ]
+      .filter(Boolean)
+      .join(" ");
+  const all = team.fixtures
+    .filter((f) => f.opponent.trim())
+    .sort((a, b) => `${a.date}T${a.kickoff}`.localeCompare(`${b.date}T${b.kickoff}`));
+  if (!all.length) return null;
+  const current = all.find((f) => isSameGame(m, f));
+  return (
+    <Select
+      label={t("fillFrom")}
+      value={current?.id ?? ""}
+      items={[
+        { value: "", label: t("pick") },
+        ...all.map((f) => ({ value: f.id, label: label(f) })),
+      ]}
+      onChange={(id) => id && playFixture(id)}
+    />
+  );
+}
+
+/** Import fixtures from DBU, or update the ones already imported. */
+function DbuTools({ team }: { team: Team }) {
+  const importFixtures = useStudio((s) => s.importFixtures);
+  const playFixture = useStudio((s) => s.playFixture);
+  // The team the import dialog was opened for; its import lands there.
+  const [openFor, setOpenFor] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const t = useTranslations("dbu.fixtures");
+  const tErrors = useTranslations("dbu.errors");
+
+  /**
+   * Applies an import to the team it was started for (`teamId`), even if another team
+   * is open by the time DBU answers. A team deleted in the meantime gets nothing.
+   */
+  async function apply(teamId: string, data: DbuImport, link: DbuLink) {
+    const teamNow = () => useStudio.getState().teams.find((x) => x.id === teamId);
+    if (!teamNow()) return;
+    const fresh = toFixtures(data);
+    // Only fill the crest in when the team has none: one picked by hand stays.
+    const crest = !teamNow()?.crest && data.club.crest ? data.club.crest : null;
+    const extra = crest ? { crest, crestKind: await crestKindOf(crest) } : {};
+    const { added, updated } = importFixtures(teamId, link, fresh, extra);
+    const now = teamNow();
+    if (!now) return;
+    const next = nextFixture(now.fixtures);
+    const title =
+      added || updated
+        ? t("fromDbu", {
+            summary: [
+              added && t("added", { count: added }),
+              updated && t("updated", { count: updated }),
+            ]
+              .filter(Boolean)
+              .join(", "),
+          })
+        : t("upToDate");
+    const isCurrent = !!next && isSameGame(now.match, next);
+    if (next && matchIsBlank(now)) {
+      playFixture(next.id, teamId);
+      toast.success(title, { description: t("matchSet", { opponent: next.opponent }) });
+    } else {
+      toast.success(title, {
+        action:
+          next && !isCurrent
+            ? {
+                label: t("next", { opponent: next.opponent }),
+                onClick: () => playFixture(next.id, teamId),
+              }
+            : undefined,
+      });
+    }
+  }
+
+  async function update(link: DbuLink) {
+    const teamId = team.id;
+    setUpdating(true);
+    try {
+      await apply(teamId, await getDbuImport(link), link);
+    } catch (e) {
+      toast.error(t("updateFailed"), { description: tErrors(dbuErrorKey(e)) });
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {team.dbu ? (
+        <>
+          <Button size="sm" onClick={() => update(team.dbu!)} disabled={updating}>
+            <ArrowsClockwiseIcon size={14} className={clsx(updating && "animate-spin")} />
+            {updating ? t("updating") : t("update")}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setOpenFor(team.id)} disabled={updating}>
+            {t("changeTeams")}
+          </Button>
+        </>
+      ) : (
+        <Button size="sm" variant="ghost" onClick={() => setOpenFor(team.id)}>
+          <DownloadSimpleIcon size={14} />
+          {t("import")}
+        </Button>
+      )}
+      <DbuImportDialog
+        open={openFor !== null}
+        onOpenChange={(o) => !o && setOpenFor(null)}
+        initialQuery={team.name}
+        link={team.dbu}
+        onImport={(data, link) => apply(openFor ?? team.id, data, link)}
+      />
+    </div>
   );
 }

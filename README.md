@@ -66,6 +66,12 @@ are written to `data/dev/outbox/`, images to `data/dev/objects/`, and the databa
 - `src/components/lofi/Window.tsx`: the low-fi window panel used across the site.
 - `src/components/landing/PixelGrass.tsx`: pixel grass strip with a kickable ball.
 - `scripts/make-turf.py`: regenerates the pixel turf tiles in `public/lofi/`.
+- `src/server/dbu/` and `src/lib/dbu.ts`: "Import from DBU" for Danish clubs. The server reads
+  dbu.dk's public results pages (club search, team list, club info, fixtures) and crests from
+  file.dbu.dk, caches them in memory, and hands back the club's crest and colours plus fixtures
+  with each opponent's crest and colours. For a match picked from those fixtures, "Get from DBU"
+  reads its page for the team sheet (holdkort), score, goals and substitutions
+  (`src/components/dbu/DbuMatchDialog.tsx`). No DBU login. The routes are `src/app/api/dbu/`.
 - `src/lib/kinds.ts`: the list of graphics; `src/lib/kits.ts`: kit colour presets.
 - `src/lib/brand.ts`: the product name and domain.
 - Search and sharing: `src/app/robots.ts`, `src/app/sitemap.ts` (the public pages are
