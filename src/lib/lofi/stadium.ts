@@ -578,8 +578,11 @@ interface MosaicPlan {
 }
 
 function initialsOf(text: string): string {
-  const words = text.split(/\s+/).filter(Boolean);
-  return words.length > 1 ? words.map((x) => x[0]).join("") : text.slice(0, 4);
+  // Whole characters in composed form, so "Å" or an emoji is never cut in half.
+  const words = text.normalize("NFC").split(/\s+/).filter(Boolean);
+  return words.length > 1
+    ? words.map((x) => [...x][0]).join("")
+    : [...text.normalize("NFC")].slice(0, 4).join("");
 }
 
 /** Letters in the second colour on a ground of the first, unless they'd barely show. */
