@@ -313,7 +313,7 @@ export function SetupForm({
                 <DbuStart flow={flow} />
                 <DraftPreview
                   flow={flow}
-                  note={d.dbu && d.crest ? t("name.noteDbu") : t("name.note")}
+                  note={d.crest && d.crest === d.dbu?.crest ? t("name.noteDbu") : t("name.note")}
                 />
               </Question>
             )}

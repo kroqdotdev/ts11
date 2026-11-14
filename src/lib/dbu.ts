@@ -242,17 +242,24 @@ function parseScore(score: string): { us: number; them: number } | null {
 }
 
 /**
+ * Whether the match on the graphics is this fixture's game: the same date and
+ * opponent, and, when both carry DBU's match number, the same number too (a club can
+ * meet one opponent twice on a day). The date and opponent always count, so a match
+ * retyped by hand for another game never passes for a DBU fixture it came from.
+ */
+export function isSameGame(m: Match, f: Fixture): boolean {
+  const sameDay =
+    m.date === f.date && m.opponent.trim().toLowerCase() === f.opponent.trim().toLowerCase();
+  return sameDay && (m.dbu && f.dbuMatchId ? m.dbu.matchId === f.dbuMatchId : true);
+}
+
+/**
  * The match graphics' details set from a fixture. A different game (another
  * opponent or date) starts with a clean sheet: no goals, subs or player of the
  * match, and the fixture's result typed in when it has one.
  */
 export function matchFromFixture(m: Match, f: Fixture): Match {
-  // DBU's match number decides when both have one: a club can meet the same opponent
-  // twice on one day (a tournament). Otherwise the date and opponent do.
-  const same =
-    m.dbu && f.dbuMatchId
-      ? m.dbu.matchId === f.dbuMatchId
-      : m.date === f.date && m.opponent.trim().toLowerCase() === f.opponent.trim().toLowerCase();
+  const same = isSameGame(m, f);
   const result = parseScore(f.score);
   const fresh: Partial<Match> = same
     ? {}

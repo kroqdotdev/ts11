@@ -30,6 +30,7 @@ import { crestKindOf } from "@/lib/crest";
 import {
   dbuErrorKey,
   getDbuImport,
+  isSameGame,
   matchIsBlank,
   nextFixture,
   toFixtures,
@@ -773,9 +774,7 @@ function FromFixtures({ team }: { team: Team }) {
     .filter((f) => f.opponent.trim())
     .sort((a, b) => `${a.date}T${a.kickoff}`.localeCompare(`${b.date}T${b.kickoff}`));
   if (!all.length) return null;
-  const current = all.find(
-    (f) => f.date === m.date && f.opponent.trim().toLowerCase() === m.opponent.trim().toLowerCase(),
-  );
+  const current = all.find((f) => isSameGame(m, f));
   return (
     <Select
       label={t("fillFrom")}
@@ -825,10 +824,7 @@ function DbuTools({ team }: { team: Team }) {
               .join(", "),
           })
         : t("upToDate");
-    const isCurrent =
-      !!next &&
-      next.date === now.match.date &&
-      next.opponent.trim().toLowerCase() === now.match.opponent.trim().toLowerCase();
+    const isCurrent = !!next && isSameGame(now.match, next);
     if (next && matchIsBlank(now)) {
       playFixture(next.id, teamId);
       toast.success(title, { description: t("matchSet", { opponent: next.opponent }) });

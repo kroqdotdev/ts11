@@ -233,13 +233,14 @@ export function useSetupFlow({
     const crestKind = crest ? await crestKindOf(crest) : undefined;
     const colors = data.club.colors;
     setD((prev) => {
-      // The crest from an earlier import goes with that club; one the person added stays.
+      // A crest the person added stays, whatever DBU has. One from an earlier import
+      // goes with that club, and DBU's crest for the new club (if any) takes its place.
       const ownCrest = !!prev.crest && prev.crest !== prev.dbu?.crest;
       return {
         ...prev,
         name: data.club.name,
         shortName: prev.shortEdited ? prev.shortName : initials(data.club.name, 4),
-        ...(crest ? { crest, crestKind } : ownCrest ? {} : { crest: null, crestKind: undefined }),
+        ...(ownCrest ? {} : crest ? { crest, crestKind } : { crest: null, crestKind: undefined }),
         // DBU names the colours, not the pattern, so a plain shirt is the honest start.
         ...(colors ? { colors, custom: colors, look: "block" as const } : {}),
         dbu: { link, fixtures: toFixtures(data), crest },

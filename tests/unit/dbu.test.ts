@@ -3,6 +3,7 @@ import sharp from "sharp";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   findPlayerByName,
+  isSameGame,
   matchFromFixture,
   mergeFixtures,
   nextFixture,
@@ -723,5 +724,34 @@ describe("review fixes", () => {
     });
     await expect(searchClubs("broken off")).rejects.toBeInstanceOf(DbuUnavailable);
     setDbuFetch(null);
+  });
+});
+
+describe("second review", () => {
+  it("never takes a match retyped by hand for the DBU fixture it came from", () => {
+    const f: Fixture = {
+      id: "f",
+      opponent: "Farum BK",
+      isHome: true,
+      date: "2027-02-13",
+      kickoff: "13:00",
+      competition: "VinterBOLD",
+      score: "",
+      dbuMatchId: "1",
+      dbuPoolId: "9",
+    };
+    const fromDbu = matchFromFixture(defaultMatch(), f);
+    expect(isSameGame(fromDbu, f)).toBe(true);
+    // Retyped for a friendly; the DBU number is still on the match.
+    const friendly = {
+      ...fromDbu,
+      opponent: "Old Boys",
+      date: "2027-02-20",
+      goals: [{ id: "g", side: "us" as const, name: "Lund", minute: "5" }],
+    };
+    expect(isSameGame(friendly, f)).toBe(false);
+    expect(matchFromFixture(friendly, f).goals).toEqual([]);
+    // Same day and opponent, another DBU game.
+    expect(isSameGame(fromDbu, { ...f, dbuMatchId: "2" })).toBe(false);
   });
 });
