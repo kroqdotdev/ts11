@@ -116,66 +116,72 @@ Checked on 14 November 2026, then rechecked after the measurements below. Many i
 mechanical checks are a search over `src/components/account`, `src/components/sync`,
 `src/app/account`, `src/app/reset-password`, `src/app/privacy` and `src/server/mail-templates.ts`.
 
-| Check                                | Result                                                                                                                                                                                     |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Design read declared                 | Pass: above                                                                                                                                                                                |
-| Dials explicit and reasoned          | Pass: above                                                                                                                                                                                |
-| Design system chosen honestly        | Pass: the project's own tokens and Base UI, no second system                                                                                                                               |
-| Redesign mode and audit              | Pass: preserve; tokens, type and components reused                                                                                                                                         |
-| Zero em or en dashes in visible text | Pass: none found                                                                                                                                                                           |
-| One theme per page                   | Pass: light and dark follow the system, no section flips                                                                                                                                   |
-| One accent colour                    | Pass: `--card` only; `--danger` is reserved for destructive actions and hard limits                                                                                                        |
-| One corner system                    | Pass: 4px on windows, inputs and buttons, as in the studio; no pills or large radii                                                                                                        |
-| Button contrast (AA)                 | Pass: ink on card 11.1:1; paper on danger 5.5:1 light, 6.5:1 dark                                                                                                                          |
-| No wrapped CTA labels on desktop     | Pass: checked in screenshots at 1440 and 1280 px                                                                                                                                           |
-| Form contrast                        | Pass: 2px ink input borders; helper text ink-soft on paper 7.0:1; focus ring is the global two-tone ring                                                                                   |
-| Serif discipline                     | Pass: no serif                                                                                                                                                                             |
-| Premium-consumer palette             | n/a                                                                                                                                                                                        |
-| Italic descender clearance           | n/a: no italic display type                                                                                                                                                                |
-| Hero rules (fits, padding, stack)    | n/a: no hero                                                                                                                                                                               |
-| Eyebrow count                        | Pass: none; the only uppercase is the avatar initial                                                                                                                                       |
-| Split-header ban                     | Pass: headings stack above their text                                                                                                                                                      |
-| Zigzag cap, logo wall, bento         | n/a                                                                                                                                                                                        |
-| No duplicate CTA intent              | Pass: one "Sign in" entry per surface; the confirm-email chip was removed because the banner already says it                                                                               |
-| Copy self-audit                      | Pass: every string re-read; fixed "Waiting for you" (now "Choose what to keep") and two differently worded sign-out toasts                                                                 |
-| Motion motivated                     | Pass: dialog open (state change), NumberFlow count (feedback on delete), status blink (live state)                                                                                         |
-| No scroll listeners                  | Pass                                                                                                                                                                                       |
-| Reduced motion respected             | Pass: the blink is `motion-safe` only, NumberFlow follows the setting, global reduced-motion block in `globals.css`                                                                        |
-| Dark mode tested                     | Pass: dialog, account page, banner and privacy page captured in both themes                                                                                                                |
-| Mobile collapse explicit             | Pass: one column below `lg`, captured at 390 px (screens/account-states-phone.webp); dialog and banner reflow (screens/signin-dialog-and-reset.webp)                                       |
-| `min-h-dvh`, never `h-screen`        | Pass                                                                                                                                                                                       |
-| Empty, loading and error states      | Pass: all four captured on a phone, from left: empty, loading skeleton, error with retry, filled (screens/account-states-phone.webp)                                                       |
-| Icons from one library               | Pass: Phosphor only                                                                                                                                                                        |
-| No generic spinners                  | Pass: the sync chip's spinner was replaced by the pixel blink                                                                                                                              |
-| Decorative status dots               | Pass: the only dot is the sync blink, which shows real state                                                                                                                               |
-| Long lists                           | Pass: images are a card grid with sort controls, not a ruled list                                                                                                                          |
-| Progress bars with grey tracks       | Pass: the storage meter is discrete blocks without a track                                                                                                                                 |
-| Core Web Vitals                      | Partial: see the measurements below. CLS 0 and TBT under 300 ms everywhere; LCP passes on `/privacy` but not on `/account` or `/reset-password` under Lighthouse's throttled phone profile |
+| Check                                | Result                                                                                                                                                                                                           |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Design read declared                 | Pass: above                                                                                                                                                                                                      |
+| Dials explicit and reasoned          | Pass: above                                                                                                                                                                                                      |
+| Design system chosen honestly        | Pass: the project's own tokens and Base UI, no second system                                                                                                                                                     |
+| Redesign mode and audit              | Pass: preserve; tokens, type and components reused                                                                                                                                                               |
+| Zero em or en dashes in visible text | Pass: none found                                                                                                                                                                                                 |
+| One theme per page                   | Pass: light and dark follow the system, no section flips                                                                                                                                                         |
+| One accent colour                    | Pass: `--card` only; `--danger` is reserved for destructive actions and hard limits                                                                                                                              |
+| One corner system                    | Pass: 4px on windows, inputs and buttons, as in the studio; no pills or large radii                                                                                                                              |
+| Button contrast (AA)                 | Pass: ink on card 11.1:1; paper on danger 5.5:1 light, 6.5:1 dark                                                                                                                                                |
+| No wrapped CTA labels on desktop     | Pass: checked in screenshots at 1440 and 1280 px                                                                                                                                                                 |
+| Form contrast                        | Pass: 2px ink input borders; helper text ink-soft on paper 7.0:1; focus ring is the global two-tone ring                                                                                                         |
+| Serif discipline                     | Pass: no serif                                                                                                                                                                                                   |
+| Premium-consumer palette             | n/a                                                                                                                                                                                                              |
+| Italic descender clearance           | n/a: no italic display type                                                                                                                                                                                      |
+| Hero rules (fits, padding, stack)    | n/a: no hero                                                                                                                                                                                                     |
+| Eyebrow count                        | Pass: none; the only uppercase is the avatar initial                                                                                                                                                             |
+| Split-header ban                     | Pass: headings stack above their text                                                                                                                                                                            |
+| Zigzag cap, logo wall, bento         | n/a                                                                                                                                                                                                              |
+| No duplicate CTA intent              | Pass: one "Sign in" entry per surface; the confirm-email chip was removed because the banner already says it                                                                                                     |
+| Copy self-audit                      | Pass: every string re-read; fixed "Waiting for you" (now "Choose what to keep") and two differently worded sign-out toasts                                                                                       |
+| Motion motivated                     | Pass: dialog open (state change), NumberFlow count (feedback on delete), status blink (live state)                                                                                                               |
+| No scroll listeners                  | Pass                                                                                                                                                                                                             |
+| Reduced motion respected             | Pass: the blink is `motion-safe` only, NumberFlow follows the setting, global reduced-motion block in `globals.css`                                                                                              |
+| Dark mode tested                     | Pass: dialog, account page, banner and privacy page captured in both themes                                                                                                                                      |
+| Mobile collapse explicit             | Pass: one column below `lg`, captured at 390 px (screens/account-states-phone.webp); dialog and banner reflow (screens/signin-dialog-and-reset.webp)                                                             |
+| `min-h-dvh`, never `h-screen`        | Pass                                                                                                                                                                                                             |
+| Empty, loading and error states      | Pass: all four captured on a phone, from left: empty, loading skeleton, error with retry, filled (screens/account-states-phone.webp)                                                                             |
+| Icons from one library               | Pass: Phosphor only                                                                                                                                                                                              |
+| No generic spinners                  | Pass: the sync chip's spinner was replaced by the pixel blink                                                                                                                                                    |
+| Decorative status dots               | Pass: the only dot is the sync blink, which shows real state                                                                                                                                                     |
+| Long lists                           | Pass: images are a card grid with sort controls, not a ruled list                                                                                                                                                |
+| Progress bars with grey tracks       | Pass: the storage meter is discrete blocks without a track                                                                                                                                                       |
+| Core Web Vitals                      | Partial: CLS, TBT, accessibility and best practices pass everywhere; LCP is under 2.5 s in real conditions but 2.7-3.9 s in the simulated slow-4G profile on `/account` and `/reset-password` (see Measurements) |
 
 ## Measurements
 
 Lighthouse 12.8.2 against teamsheet11.com, mobile profile (simulated slow 4G and a 4x slower CPU),
-14 November 2026, best of two runs:
+14 November 2026, three runs per page after all the fixes below. "Real" is the same run's observed,
+unthrottled timing.
 
-| Page                       | Performance | Accessibility | Best practices | FCP   | LCP   | CLS  | TBT    |
-| -------------------------- | ----------- | ------------- | -------------- | ----- | ----- | ---- | ------ |
-| `/privacy`                 | 98          | 100           | 100            | 0.9 s | 2.2 s | 0    | 90 ms  |
-| `/account` (signed out)    | 92          | 100           | 100            | 1.2 s | 2.7 s | 0    | 230 ms |
-| `/reset-password`          | 86          | 100           | 100            | 1.3 s | 3.0 s | 0    | 290 ms |
-| `/studio` (for comparison) | 74          | 100           | 100            | 1.2 s | 4.8 s | 0.09 | 270 ms |
+| Page                       | Performance | Accessibility | Best practices | FCP   | LCP (simulated) | LCP (real) | CLS    | TBT      |
+| -------------------------- | ----------- | ------------- | -------------- | ----- | --------------- | ---------- | ------ | -------- |
+| `/privacy`                 | 96          | 100           | 100            | 1.4 s | 2.7 s           | 0.2 s      | 0      | 40-90 ms |
+| `/reset-password`          | 91-96       | 100           | 100            | 1.2 s | 2.7-3.5 s       | 0.3 s      | 0-0.02 | 70-90 ms |
+| `/account` (signed out)    | 88-90       | 100           | 100            | 1.2 s | 3.6-3.9 s       | 1.1 s      | 0      | 10-80 ms |
+| `/studio` (for comparison) | 74          | 100           | 100            | 1.2 s | 4.8 s           |            | 0.09   | 270 ms   |
 
 What changed because of these numbers:
 
 - The account sync code (auth client, sync engine, merge dialog, about 250 KB) used to load on
-  every page; it now loads after the page is interactive. `/privacy` went from LCP 3.5 s to 2.2 s.
-- The logo link no longer prefetches the home page (91 KB) on every page.
+  every page; it now loads after the page is interactive.
+- The logo link no longer prefetches the home page (91 KB).
 - `/account` checks the session on the server and `/reset-password` reads its token on the server,
   so their content is in the first HTML instead of appearing after the scripts run.
+- Fonts: the interface now uses a 34 KB weight-only Archivo. The graphics keep the 87 KB cut with
+  the width axis (their condensed headings), bundled under its own name (`archivoWide`, SIL OFL,
+  `src/fonts/`) so the browser only downloads it where a graphic uses it. Fonts per page went from
+  95 KB to 41 KB.
 
-What's left: on these pages the largest text paints immediately (unthrottled, LCP equals first
-paint at about 0.3 s), but in the simulated slow-4G profile it waits on the 89 KB variable Archivo
-font. That font's width axis drives the condensed type in the graphics, so it stays for now.
-Serving the app chrome a smaller static cut of Archivo is the next step if this needs to go lower.
+Where it stands: CLS, TBT, accessibility and best practices meet their targets on every account
+page. LCP is under 2.5 s in real conditions but not in Lighthouse's simulated slow-4G profile, where
+`/account` and `/reset-password` land at 2.7-3.9 s. What's left there is the framework itself (the
+Next.js and React runtime, about 150 KB) and, on `/account`, the session check; getting under the
+simulated target would mean moving these pages off the App Router's client runtime.
 
 Accessibility scored 100 on every account page. The one failure Lighthouse found on the site was on
 the home page, inside a sample graphic (white text on a gold Halves panel); that belongs to the
