@@ -5,6 +5,8 @@ import { useEffect, useEffectEvent, type RefObject } from "react";
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+const POPUP = "[role='dialog'], [role='menu'], [role='listbox'], [data-side]";
+
 function focusables(root: HTMLElement): HTMLElement[] {
   return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
     (el) => el.offsetParent !== null || el.getClientRects().length > 0,
@@ -42,6 +44,8 @@ export function useFocusTrap(
       const first = items[0];
       const last = items[items.length - 1];
       const at = document.activeElement;
+      // Let an open popup handle Tab itself; it hands focus back when it closes.
+      if (at && !root.contains(at) && at.closest(POPUP)) return;
       if (e.shiftKey && (at === first || !root.contains(at))) {
         e.preventDefault();
         last.focus();
@@ -51,8 +55,12 @@ export function useFocusTrap(
       }
     };
     const onFocusIn = (e: FocusEvent) => {
-      const target = e.target as Node | null;
-      if (target && !root.contains(target)) focusables(root)[0]?.focus();
+      const target = e.target as Element | null;
+      if (!target || root.contains(target)) return;
+      // Popups opened from inside the setup (the colour picker) render in a portal
+      // outside it. Focus moving into one is still part of the setup.
+      if (target.closest?.(POPUP)) return;
+      focusables(root)[0]?.focus();
     };
 
     document.addEventListener("keydown", onKey);
