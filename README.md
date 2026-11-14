@@ -74,6 +74,11 @@ are written to `data/dev/outbox/`, images to `data/dev/objects/`, and the databa
   (`src/components/dbu/DbuMatchDialog.tsx`). No DBU login. The routes are `src/app/api/dbu/`.
 - `src/lib/kinds.ts`: the list of graphics; `src/lib/kits.ts`: kit colour presets.
 - `src/lib/brand.ts`: the product name and domain.
+- Search and sharing: `src/app/robots.ts`, `src/app/sitemap.ts` (the public pages are
+  `PUBLIC_PAGES` in `src/i18n/seo.ts`; add a new public page there), `src/app/manifest.ts`,
+  `src/app/apple-icon.tsx`, and the link-preview picture at `/og/en.png` and `/og/da.png`
+  (`src/app/og/[image]/route.tsx`). Every page gets Open Graph and X card tags from
+  `sharing()` in `src/i18n/metadata.ts`.
 
 ## Languages
 

@@ -4,6 +4,7 @@ import { routing } from "./i18n/routing";
 export default createMiddleware(routing);
 
 export const config = {
-  // Pages only: not the API, Next's own files, or anything with a file extension.
-  matcher: "/((?!api|_next|_vercel|.*\\..*).*)",
+  // Pages only: not the API, Next's own files, the generated Apple icon (no extension in its
+  // URL), or anything with a file extension.
+  matcher: "/((?!api|_next|_vercel|apple-icon|.*\\..*).*)",
 };

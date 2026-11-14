@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { APP_NAME } from "@/lib/brand";
-import { alternates } from "./metadata";
+import { alternates, sharing } from "./metadata";
 import { isLocale, routing, type Locale, type Pathname } from "./routing";
 
 /** Reads the [locale] segment and makes it the locale for this render. */
@@ -24,10 +24,13 @@ export async function pageMetadata(
   const { locale } = await params;
   const l = isLocale(locale) ? locale : routing.defaultLocale;
   const t = await getTranslations({ locale: l, namespace: "meta" });
+  const title = t(`${key}.title`);
+  const description = t(`${key}.description`, { app: APP_NAME });
   return {
-    title: t(`${key}.title`),
-    description: t(`${key}.description`, { app: APP_NAME }),
+    title,
+    description,
     alternates: alternates(href, l),
+    ...sharing(href, l, `${title} | ${APP_NAME}`, description, t("home.title", { app: APP_NAME })),
     ...extra,
   };
 }
