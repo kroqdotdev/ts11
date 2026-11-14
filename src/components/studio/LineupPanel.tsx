@@ -27,6 +27,7 @@ import clsx from "clsx";
 import { useTranslations } from "next-intl";
 import { useId, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { DbuMatchButton } from "@/components/dbu/DbuMatchDialog";
 import { Button, Section, Segmented, Select } from "@/components/ui/controls";
 import { RovingList } from "@/components/ui/roving";
 import { FORMATIONS, formationSlots, TEAM_SIZES } from "@/lib/formation";
@@ -323,6 +324,7 @@ export function LineupPanel() {
   return (
     <>
       <Section title={t("shape")}>
+        <DbuMatchButton kind="lineup" className="self-start" />
         <div className="flex flex-col gap-1.5">
           <span className="text-[13px] font-medium">{t("perSide")}</span>
           <Segmented<`${TeamSize}`>

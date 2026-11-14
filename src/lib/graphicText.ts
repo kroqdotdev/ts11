@@ -40,6 +40,8 @@ export interface GraphicText {
   subFor: string;
   /** Printed for a goal with no scorer filled in. */
   goal: string;
+  /** The scorer's name for an own goal, as imported from DBU. */
+  ownGoal: string;
   /** Printed for a player whose name is blank. */
   unnamed: string;
   /** A fixture row with no opponent filled in. */
@@ -118,6 +120,7 @@ const TEXT: Record<Language, GraphicText> = {
     off: "Off",
     subFor: "for",
     goal: "Goal",
+    ownGoal: "Own goal",
     unnamed: "Unnamed",
     opponent: "Opponent",
     kickoff: "Kick-off",
@@ -177,6 +180,7 @@ const TEXT: Record<Language, GraphicText> = {
     off: "Ud",
     subFor: "ind for",
     goal: "Mål",
+    ownGoal: "Selvmål",
     unnamed: "Uden navn",
     opponent: "Modstander",
     kickoff: "Kampstart",

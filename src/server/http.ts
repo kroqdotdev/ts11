@@ -50,6 +50,21 @@ export async function requireUser(
 }
 
 /**
+ * The visitor's address, for per-IP limits on routes that work signed out. In
+ * production the reverse proxy sets X-Real-IP (see auth.ts); in development the
+ * forwarded header is trusted too.
+ */
+export function clientIp(request: Request): string {
+  const real = request.headers.get("x-real-ip")?.trim();
+  if (real) return real;
+  if (!env.isProd) {
+    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    if (forwarded) return forwarded;
+  }
+  return "unknown";
+}
+
+/**
  * Reads a request body up to `max` bytes. Content-Length can be left out (chunked
  * uploads), so the stream itself is counted. Returns null when it's too big.
  */

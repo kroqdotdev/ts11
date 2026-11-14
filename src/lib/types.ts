@@ -54,8 +54,17 @@ export interface Fixture {
   date: string;
   kickoff: string;
   competition: string;
-  /** Filled in once played, e.g. "3-1". Empty for upcoming fixtures. */
+  /** Filled in once played, ours first, e.g. "3-1". Empty for upcoming fixtures. */
   score: string;
+  /** Where it's played. Imported from DBU; used when the fixture becomes the match. */
+  venue?: string;
+  /** The opponent's crest, used when the fixture becomes the match. */
+  opponentCrest?: string | null;
+  opponentColors?: Colors;
+  /** DBU's match number when imported from DBU, so an update refreshes it in place. */
+  dbuMatchId?: string;
+  /** DBU's pool (puljeId), which with the match number finds the match's own page. */
+  dbuPoolId?: string;
 }
 
 export interface Match {
@@ -84,6 +93,8 @@ export interface Match {
   motmId: string | null;
   /** A short line under the player of the match, e.g. "Two goals and an assist". */
   motmNote: string;
+  /** The DBU match this is, when set from an imported fixture: for line-up and result. */
+  dbu?: { matchId: string; poolId: string };
 }
 
 export interface Team {
@@ -107,6 +118,14 @@ export interface Team {
   lineup: Lineup;
   match: Match;
   fixtures: Fixture[];
+  /** Set when the fixtures come from DBU (Denmark), so they can be updated from there. */
+  dbu?: DbuLink;
+}
+
+/** The DBU club and teams (team and pool ids) a team's fixtures are imported from. */
+export interface DbuLink {
+  clubId: string;
+  teams: { teamId: string; poolId: string }[];
 }
 
 export type GraphicKind =

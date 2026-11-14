@@ -6,6 +6,7 @@
  */
 import daAccount from "./da/account.json";
 import daCommon from "./da/common.json";
+import daDbu from "./da/dbu.json";
 import daEmails from "./da/emails.json";
 import daLanding from "./da/landing.json";
 import daMeta from "./da/meta.json";
@@ -16,6 +17,7 @@ import daSync from "./da/sync.json";
 import daUi from "./da/ui.json";
 import enAccount from "./en/account.json";
 import enCommon from "./en/common.json";
+import enDbu from "./en/dbu.json";
 import enEmails from "./en/emails.json";
 import enLanding from "./en/landing.json";
 import enMeta from "./en/meta.json";
@@ -35,6 +37,7 @@ const en = {
   emails: enEmails,
   setup: enSetup,
   studio: enStudio,
+  dbu: enDbu,
   ui: enUi,
 };
 
@@ -51,6 +54,7 @@ const da: Shape<typeof en> = {
   emails: daEmails,
   setup: daSetup,
   studio: daStudio,
+  dbu: daDbu,
   ui: daUi,
 };
 

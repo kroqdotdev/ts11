@@ -26,6 +26,7 @@
   "where": {
     "title": "Where it is kept",
     "servers": "The website, the database and uploaded images are on Hetzner servers in Germany. Account emails are sent through Amazon Web Services in Frankfurt, Germany. Both act only on our instructions (they are our data processors). Signing in with Google is covered by Google's own privacy policy.",
+    "dbu": "If you import a Danish club from DBU, our server looks up the club name you type on dbu.dk's public results pages. DBU sees a request from our server, not from you, and nothing about you is sent.",
     "links": "Uploaded images can be opened by anyone who has their exact link. The links are long and random, but don't upload anything private."
   },
   "cookies": {

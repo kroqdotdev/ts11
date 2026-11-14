@@ -229,6 +229,69 @@ await test("an inline crest is uploaded and replaced by its link", async () => {
   await ctx.close();
 });
 
+await test("imported opponents' crests on fixtures are uploaded too", async () => {
+  const ctx = await b.newContext();
+  await signIn(ctx, account.email, account.password);
+  const page = await ctx.newPage();
+  await page.goto(`${BASE}/studio`);
+  await page.waitForFunction(() => typeof window.__ts11Studio === "function");
+  await waitFor(async () => (await syncStatus(page)) === "saved", { label: "saved" });
+  // What "Import from DBU" stores: fixtures carrying inline crests, shared between fixtures.
+  await page.evaluate(() => {
+    const c = document.createElement("canvas");
+    c.width = 48;
+    c.height = 48;
+    const g = c.getContext("2d");
+    g.fillStyle = "#c8102e";
+    g.fillRect(0, 0, 48, 48);
+    const crest = c.toDataURL("image/png");
+    const fixture = (id, date) => ({
+      id,
+      opponent: "Farum BK (2)",
+      isHome: id === "f1",
+      date,
+      kickoff: "13:00",
+      competition: "VinterBOLD",
+      score: "",
+      opponentCrest: crest,
+      dbuMatchId: id,
+    });
+    const studio = window.__ts11Studio();
+    studio.importFixtures(
+      studio.activeTeamId,
+      { clubId: "1274", teams: [{ teamId: "1", poolId: "2" }] },
+      [fixture("f1", "2027-02-13"), fixture("f2", "2027-03-13")],
+    );
+  });
+  const crests = await waitFor(
+    async () => {
+      const v = await page.evaluate(() =>
+        window
+          .__ts11Studio()
+          .teams.flatMap((t) => t.fixtures)
+          .filter((f) => f.dbuMatchId)
+          .map((f) => f.opponentCrest),
+      );
+      return v.length === 2 && v.every((x) => x?.startsWith("/api/images/")) ? v : null;
+    },
+    { label: "fixture crests uploaded" },
+  );
+  assert(crests[0] === crests[1], "the same crest should be uploaded once");
+  const saved = await waitFor(
+    async () => {
+      const club = (await serverClubs(ctx)).clubs.find((c) =>
+        c.data.fixtures?.some((f) => f.dbuMatchId === "f1"),
+      );
+      return club?.data.fixtures.find((f) => f.dbuMatchId === "f1").opponentCrest === crests[0]
+        ? club
+        : null;
+    },
+    { label: "club saved with the crest links" },
+  );
+  assert(saved.data.dbu?.clubId === "1274", "the DBU link should be saved with the club");
+  await ctx.close();
+});
+
 const signOutKeep = (page) =>
   page.evaluate(() =>
     fetch("/api/auth/sign-out", {

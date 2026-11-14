@@ -26,7 +26,8 @@
     "label": "Klubnavn",
     "placeholder": "fx Bakkely IF",
     "short": "Forkortelse",
-    "note": "Dit skjold, indtil du tilføjer et klublogo. Farverne kommer lige om lidt."
+    "note": "Dit skjold, indtil du tilføjer et klublogo. Farverne kommer lige om lidt.",
+    "noteDbu": "Klublogoet fra DBU. Du kan skifte det i næste trin."
   },
   "crest": {
     "title": "Tilføj dit klublogo",

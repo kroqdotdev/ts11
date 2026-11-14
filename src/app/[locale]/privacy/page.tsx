@@ -105,6 +105,7 @@ export default async function Page({ params }: PageProps<"/[locale]/privacy">) {
 
           <Section title={t("where.title")}>
             <p>{t("where.servers")}</p>
+            <p>{t("where.dbu")}</p>
             <p>{t("where.links")}</p>
           </Section>
 
