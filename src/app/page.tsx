@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { Graphic } from "@/components/graphics/Graphic";
 import { PixelGrass } from "@/components/landing/PixelGrass";
@@ -256,6 +257,17 @@ export default function Home() {
         <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-3 px-4 pt-2 pb-10 text-sm text-chalk/70 md:flex-row md:items-center md:justify-between md:px-8">
           <Wordmark />
           <p>Free match day graphics for grassroots and semi-pro clubs.</p>
+          <nav aria-label="More" className="flex flex-wrap gap-x-5 gap-y-2">
+            <a href={SOURCE_URL} className="underline-offset-4 hover:underline">
+              Source code
+            </a>
+            <Link href="/privacy" className="underline-offset-4 hover:underline">
+              Privacy
+            </Link>
+            <Link href="/account" className="underline-offset-4 hover:underline">
+              Your account
+            </Link>
+          </nav>
         </div>
       </footer>
     </div>

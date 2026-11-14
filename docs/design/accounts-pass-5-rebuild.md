@@ -82,3 +82,30 @@ Keep the exports `verifyEmail(to, url)` and `resetPassword(to, url)` returning
 `pnpm check`, `pnpm test`, `pnpm test:e2e` and `pnpm check:graphics` pass, and each item above is
 captured on screen (privacy light and dark, 1280 px and 390 px; both emails at 640 px and 360 px;
 reset shell; footer; team menu open; setup with the sign-in link), with results recorded below.
+
+## Results
+
+Built from this plan in `src/app/privacy/page.tsx`, `src/server/mail-templates.ts`,
+`src/app/reset-password/page.tsx`, `src/app/page.tsx`, `src/components/studio/TeamMenu.tsx` and
+`src/components/studio/ClubSetup.tsx`.
+
+`pnpm check`, `pnpm test` (29 tests), `pnpm test:e2e` (sync, auth API, images) and
+`pnpm check:graphics` (1,296 graphics, no faults) pass.
+
+| Item                               | Result                      | Evidence                                                          |
+| ---------------------------------- | --------------------------- | ----------------------------------------------------------------- |
+| Privacy, dark, 1280 px             | Pass                        | [pass-5-privacy-1280-dark](screens/pass-5-privacy-1280-dark.webp) |
+| Privacy, light, 390 px             | Pass                        | [pass-5-privacy-390-light](screens/pass-5-privacy-390-light.webp) |
+| Verify email, 640 px               | Pass                        | [pass-5-mail-verify-640](screens/pass-5-mail-verify-640.webp)     |
+| Reset email, 360 px                | Pass                        | [pass-5-mail-reset-360](screens/pass-5-mail-reset-360.webp)       |
+| Reset password shell, dark, 390 px | Pass                        | [pass-5-reset-390-dark](screens/pass-5-reset-390-dark.webp)       |
+| Landing footer links               | Pass                        | [pass-5-footer-1280](screens/pass-5-footer-1280.webp)             |
+| Team menu "Source code"            | Pass                        | [pass-5-team-menu-1280](screens/pass-5-team-menu-1280.webp)       |
+| Setup sign-in link, 390 px         | Pass, with the change below | [pass-5-setup-signin-390](screens/pass-5-setup-signin-390.webp)   |
+
+Deviations:
+
+- Under the `sm` breakpoint the setup link shows only "Sign in"; "Already have an account?" is
+  kept for screen readers. The full label overflowed the header at 390 px.
+- At 390 px "Try the example club" still wraps to two lines next to it. It wrapped before this
+  pass too; left as is.
