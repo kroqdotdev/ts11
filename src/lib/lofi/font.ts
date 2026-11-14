@@ -117,13 +117,16 @@ const BELOW: Record<string, string> = {
 };
 
 /** The glyph rows for one capital letter, or null if the font can't draw it. */
-function rowsFor(ch: string): string | null {
+export function rowsFor(ch: string): string | null {
   if (GLYPHS[ch]) return GLYPHS[ch];
-  const [base, mark, ...rest] = ch.normalize("NFD");
-  if (!base || rest.length) return null;
-  if (mark && BODY5[base] && ABOVE[mark]) return `${ABOVE[mark]} 00000 ${BODY5[base]}`;
-  if (mark && BODY6[base] && BELOW[mark]) return `${BODY6[base]} ${BELOW[mark]}`;
-  // A mark the font has no room for: the plain letter is better than a "?".
+  const [base, ...marks] = ch.normalize("NFD");
+  if (!base) return null;
+  // One mark fits. With two (Vietnamese Ệ, Ǻ), the first one above is drawn, and the
+  // plain letter is the fallback: better than a "?" or a missing letter.
+  const above = marks.find((m) => ABOVE[m]);
+  if (above && BODY5[base]) return `${ABOVE[above]} 00000 ${BODY5[base]}`;
+  const below = marks.length === 1 ? BELOW[marks[0]] : undefined;
+  if (below && BODY6[base]) return `${BODY6[base]} ${below}`;
   return GLYPHS[base] ?? null;
 }
 

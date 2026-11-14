@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eachTextPixel, textWidth, toBoardText } from "../../src/lib/lofi/font";
+import { eachTextPixel, rowsFor, textWidth, toBoardText } from "../../src/lib/lofi/font";
 
 /** The lit pixels of one character, as a string of rows. */
 function drawn(ch: string): string {
@@ -41,9 +41,27 @@ describe("pixel font", () => {
 
   it("measures text the way it draws it, also when ß becomes SS", () => {
     expect(textWidth("ß")).toBe(textWidth("SS"));
+    // "STRASSE" ends in an E, whose right column is lit: the last pixel is the width - 1.
     let right = 0;
     eachTextPixel("straße", 0, 0, 1, (x) => (right = Math.max(right, x)));
-    expect(right).toBeLessThan(textWidth("straße"));
+    expect(right).toBe(textWidth("straße") - 1);
+    expect(textWidth("straße")).toBe(textWidth("STRASSE"));
+  });
+
+  it("keeps a letter with two accents, as the plain letter at worst", () => {
+    expect(toBoardText("Sông Lam Nghệ An")).toBe("SÔNG LAM NGHỆ AN");
+    expect(toBoardText("Hà Nội FC")).toBe("HÀ NỘI FC");
+    expect(toBoardText("Ǻlborg")).toBe("ǺLBORG");
+    for (const ch of "ỆỘǺǕḈ") expect(drawn(ch)).not.toBe(QUESTION);
+  });
+
+  it("gives every glyph exactly seven rows of five", () => {
+    const all = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ÆØÅÄÖÜÉÈÊÁÑÇŞĄĘŁČŠŽŐĞİŒÐÞỆǺ-:.,!?'&+/ ";
+    for (const ch of all) {
+      const rows = rowsFor(ch)?.split(" ") ?? [];
+      expect(rows.length, ch).toBe(7);
+      for (const row of rows) expect(row, ch).toMatch(/^[01]{5}$/);
+    }
   });
 
   it("draws raw text without question marks for letters it knows", () => {
