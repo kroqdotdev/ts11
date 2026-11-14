@@ -46,3 +46,15 @@ reason is storage, since that's where images are deleted. Same window styling as
 
 Zero em dashes; one accent; AA contrast on every button; labels and focus; light and dark; 390 px
 phone; each state captured on screen; copy re-read.
+
+## Built and checked (after the plan above)
+
+- **Banner:** the address now breaks after the `@` or at a hyphen, never inside a word.
+- **"Not saved" popover:** reason plus "Go to storage and account" when storage is the cause.
+- **Merge dialog:** already matched the plan, so no code change; both steps checked on screen.
+
+Pre-flight on this pass: no em or en dashes in the three files; one accent (yellow for the safe
+choice), red only for the removal confirm; the red confirm reads 6.5:1 in dark mode and 5.5:1 in
+light; captured at 390 px and 1280 px, light and dark. Screens:
+[pass-2.webp](screens/pass-2.webp), from left: banner on a phone, the removal confirm (dark,
+phone), the merge choice (light), and the "Not saved" popover.

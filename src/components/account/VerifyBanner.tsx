@@ -31,7 +31,7 @@ export function VerifyBanner() {
       <EnvelopeSimpleIcon size={20} weight="bold" className="hidden shrink-0 sm:block" />
       <p className="min-w-0 flex-1 basis-60 text-sm leading-snug">
         Confirm your email to start saving your clubs to your account. We sent a link to{" "}
-        <strong className="break-all">{user.email}</strong>.
+        <EmailAddress email={user.email} />.
       </p>
       <ResendButton email={user.email} size="sm" />
       <button
@@ -50,5 +50,18 @@ export function VerifyBanner() {
         <XIcon size={16} weight="bold" />
       </button>
     </div>
+  );
+}
+
+/** An email address that wraps after the @ on narrow screens, never inside a word. */
+function EmailAddress({ email }: { email: string }) {
+  const at = email.indexOf("@");
+  if (at < 0) return <strong className="[overflow-wrap:anywhere]">{email}</strong>;
+  return (
+    <strong className="[overflow-wrap:anywhere]">
+      {email.slice(0, at + 1)}
+      <wbr />
+      {email.slice(at + 1)}
+    </strong>
   );
 }

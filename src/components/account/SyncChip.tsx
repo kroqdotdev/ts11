@@ -3,6 +3,7 @@
 import { Popover } from "@base-ui/react/popover";
 import { CheckIcon, CloudSlashIcon, WarningIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { useSyncState, type SyncStatus } from "@/lib/sync/state";
 
@@ -71,6 +72,14 @@ export function SyncChip({ className }: { className?: string }) {
                 <Popover.Popup className="w-[min(18rem,calc(100vw-1.5rem))] origin-(--transform-origin) rounded-[4px] border-2 border-edge bg-paper p-3 text-sm leading-relaxed text-ink shadow-[5px_5px_0_var(--edge)] transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
                   <Popover.Title className="mb-1 font-semibold">{look.label}</Popover.Title>
                   <Popover.Description>{detail}</Popover.Description>
+                  {/storage/i.test(detail) && (
+                    <Link
+                      href="/account"
+                      className="mt-2 inline-block font-semibold text-ink underline underline-offset-4"
+                    >
+                      Go to storage and account
+                    </Link>
+                  )}
                 </Popover.Popup>
               </Popover.Positioner>
             </Popover.Portal>
