@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { useRouter } from "@/i18n/navigation";
 import { useAuthDialog } from "./authDialogStore";
 
 /* The dialog and the auth client load when someone asks for them, not with the landing page. */
@@ -21,6 +22,7 @@ export function LandingSignIn({ setup = false }: { setup?: boolean }) {
   const show = useAuthDialog((s) => s.show);
   const open = useAuthDialog((s) => s.open);
   const router = useRouter();
+  const t = useTranslations("account.menu");
 
   useEffect(() => {
     let live = true;
@@ -60,8 +62,8 @@ export function LandingSignIn({ setup = false }: { setup?: boolean }) {
         className="shrink-0 rounded-[4px] px-2 py-1.5 text-sm font-medium whitespace-nowrap text-chalk underline-offset-4 hover:underline sm:px-3"
       >
         {/* Phones have room for "Sign in" only; the full label stays for screen readers. */}
-        {setup && <span className="max-sm:sr-only">Already have an account? </span>}
-        Sign in
+        {setup && <span className="max-sm:sr-only">{t("haveAccount")} </span>}
+        {t("signIn")}
       </button>
       {wanted && <AuthDialog />}
     </>

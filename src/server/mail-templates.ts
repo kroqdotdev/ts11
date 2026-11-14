@@ -1,5 +1,8 @@
 import "server-only";
+import { createTranslator } from "next-intl";
+import { isLocale, routing, type Locale } from "@/i18n/routing";
 import { APP_NAME } from "@/lib/brand";
+import { messages } from "../../messages";
 import type { Mail } from "./mail";
 
 /* Colours from the app's tokens, inlined: mail clients drop stylesheets. */
@@ -17,19 +20,57 @@ function esc(value: string): string {
 }
 
 interface Content {
+  locale: Locale;
   subject: string;
   heading: string;
   body: string;
   button: string;
   footer: string;
+  fallback: string;
 }
 
-const FALLBACK = "If the button doesn't work, paste this link into your browser:";
+/**
+ * The language an email goes out in: that of the page that asked for it. The pages
+ * pass a callback URL in their own language (/da/studio?verified=1,
+ * /da/nulstil-adgangskode), and Better Auth puts it, URL-encoded, into the link it
+ * hands us. Anything unreadable is English.
+ */
+export function linkLocale(url: string): Locale {
+  let callback: string | null;
+  try {
+    callback = new URL(url, "http://localhost").searchParams.get("callbackURL");
+  } catch {
+    return routing.defaultLocale;
+  }
+  if (!callback) return routing.defaultLocale;
+  let path: string;
+  try {
+    // Relative ("/da/konto") or absolute ("https://teamsheet11.com/da/konto").
+    path = new URL(callback, "http://localhost").pathname;
+  } catch {
+    return routing.defaultLocale;
+  }
+  const first = path.split("/")[1]?.toLowerCase();
+  return isLocale(first) ? first : routing.defaultLocale;
+}
+
+function content(kind: "verify" | "reset", locale: Locale): Content {
+  const t = createTranslator({ locale, messages: messages[locale], namespace: "emails" });
+  return {
+    locale,
+    subject: t(`${kind}.subject`, { app: APP_NAME }),
+    heading: t(`${kind}.heading`),
+    body: t(`${kind}.body`),
+    button: t(`${kind}.button`),
+    footer: t(`${kind}.footer`),
+    fallback: t("fallback"),
+  };
+}
 
 function html(c: Content, url: string): string {
   const href = esc(url);
   return `<!doctype html>
-<html lang="en">
+<html lang="${c.locale}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -49,7 +90,7 @@ function html(c: Content, url: string): string {
 <a href="${href}" style="display:inline-block;padding:12px 20px;font-family:${FONT};font-size:15px;line-height:20px;font-weight:bold;color:${INK};text-decoration:none;">${esc(c.button)}</a>
 </td></tr>
 </table>
-<p style="margin:24px 0 6px;font-size:13px;line-height:20px;color:${INK};">${esc(FALLBACK)}</p>
+<p style="margin:24px 0 6px;font-size:13px;line-height:20px;color:${INK};">${esc(c.fallback)}</p>
 <p style="margin:0 0 24px;font-size:13px;line-height:20px;word-break:break-all;"><a href="${href}" style="color:${GRASS_DEEP};word-break:break-all;">${href}</a></p>
 </td></tr>
 <tr><td style="padding:16px 24px 20px;border-top:1px solid #d2dbd1;font-family:${FONT};font-size:12px;line-height:18px;color:${INK_SOFT};">${esc(c.footer)}</td></tr>
@@ -68,36 +109,15 @@ function build(to: string, kind: "verify" | "reset", c: Content, url: string): M
   return { to, kind, subject: c.subject, text: text(c, url), html: html(c, url) };
 }
 
-/** The confirmation link sent after signing up with an email address. */
-export function verifyEmail(to: string, url: string): Mail {
-  return build(
-    to,
-    "verify",
-    {
-      subject: `Confirm your ${APP_NAME} email`,
-      heading: "Confirm your email",
-      body: "Confirm this address and your clubs save to your account, so they appear on every device you sign in on.",
-      button: "Confirm email",
-      footer:
-        "This link works for 24 hours. If you didn't sign up, ignore this email and no account is kept.",
-    },
-    url,
-  );
+/**
+ * The confirmation link sent after signing up with an email address. The language
+ * comes from the link unless given.
+ */
+export function verifyEmail(to: string, url: string, locale: Locale = linkLocale(url)): Mail {
+  return build(to, "verify", content("verify", locale), url);
 }
 
-/** The link to choose a new password. */
-export function resetPassword(to: string, url: string): Mail {
-  return build(
-    to,
-    "reset",
-    {
-      subject: `Reset your ${APP_NAME} password`,
-      heading: "Set a new password",
-      body: "Someone asked to reset the password for your account. If it was you, choose a new one with the button below.",
-      button: "Choose a new password",
-      footer:
-        "This link works for one hour. If you didn't ask for it, ignore this email and your password stays the same.",
-    },
-    url,
-  );
+/** The link to choose a new password, in the language of the page that asked for it. */
+export function resetPassword(to: string, url: string, locale: Locale = linkLocale(url)): Mail {
+  return build(to, "reset", content("reset", locale), url);
 }

@@ -2,14 +2,15 @@
 
 import { ImageIcon, TrashIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Window } from "@/components/lofi/Window";
 import { Button, Dialog, Segmented } from "@/components/ui/controls";
 import { useHydrated, useStudio } from "@/lib/store";
-import { forgetImage, imageUsage } from "@/lib/sync/images";
+import { forgetImage, imageUsage, type ImagePlace } from "@/lib/sync/images";
 import { useSyncState } from "@/lib/sync/state";
-import { formatBytes } from "./messages";
+import { useFormatBytes } from "./messages";
 
 export interface AccountImage {
   id: string;
@@ -25,14 +26,37 @@ export interface AccountImage {
 
 type Sort = "size" | "new";
 
-/** Where an image is used: this browser's labels, or the account's say-so. */
-function usageOf(img: AccountImage): string[] | null {
+/** Where an image is used: this browser's places, or the account's say-so. */
+function usageOf(img: AccountImage): ImagePlace[] | null {
   const local = imageUsage(img.url);
   if (local.length) return local;
   return img.inUse ? [] : null;
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+/** The places an image is used, in words, e.g. "Ashby Vale crest, Background photo". */
+function usePlaces() {
+  const t = useTranslations("account.images.place");
+  return useCallback(
+    (places: ImagePlace[]) =>
+      places
+        .map((p) => {
+          const club = p.kind === "crest" || p.kind === "opponentCrest" ? p.club.trim() : "";
+          switch (p.kind) {
+            case "crest":
+              return t("crest", { club: club || t("unnamedClub") });
+            case "opponentCrest":
+              return t("opponentCrest", {
+                opponent: p.opponent.trim() || t("opponent"),
+                club: club || t("club"),
+              });
+            default:
+              return t(p.kind);
+          }
+        })
+        .join(", "),
+    [t],
+  );
+}
 
 /**
  * The account's uploaded images, biggest first by default, each with where it's
@@ -48,8 +72,11 @@ export function ImagesWindow({
   const [sort, setSort] = useState<Sort>("size");
   const [busy, setBusy] = useState<Set<string>>(() => new Set());
   const [confirm, setConfirm] = useState<
-    { kind: "one"; image: AccountImage; usage: string[] } | { kind: "unused" } | null
+    { kind: "one"; image: AccountImage; usage: ImagePlace[] } | { kind: "unused" } | null
   >(null);
+  const t = useTranslations("account.images");
+  const formatBytes = useFormatBytes();
+  const places = usePlaces();
   const status = useSyncState((s) => s.status);
   // Usage is read from this browser's clubs, so wait for them and follow their changes.
   const hydrated = useHydrated();
@@ -94,23 +121,23 @@ export function ImagesWindow({
     });
     if (done.length) onDeleted(done, used);
     if (done.length < list.length) {
-      toast.error("Couldn't delete that image. Check your connection and try again.");
+      toast.error(t("deleteFailed"));
     } else {
-      toast(list.length === 1 ? "Image deleted" : `${list.length} images deleted`);
+      toast(t("deleted", { count: list.length }));
     }
   }
 
-  function ask(img: AccountImage, usage: string[] | null) {
+  function ask(img: AccountImage, usage: ImagePlace[] | null) {
     if (usage === null) void remove([img]);
     else setConfirm({ kind: "one", image: img, usage });
   }
 
   return (
     <Window
-      title="Your images"
+      title={t("title")}
       right={
         <span className="text-xs text-chalk/75 tabular-nums">
-          {plural(images.length, "image", "images")}
+          {t("count", { count: images.length })}
         </span>
       }
       bodyClassName="flex flex-col gap-4 p-4 sm:p-5"
@@ -118,24 +145,24 @@ export function ImagesWindow({
       {images.length === 0 ? (
         <div className="flex flex-col items-start gap-3 rounded-[3px] border-2 border-dashed border-ink/30 p-5 text-sm leading-relaxed text-ink-soft">
           <ImageIcon size={26} aria-hidden className="text-ink" />
-          No images yet. Crests and photos you add in the studio show up here.
+          {t("empty")}
         </div>
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Segmented
-              label="Sort images"
+              label={t("sort")}
               value={sort}
               onChange={setSort}
               options={[
-                { value: "size", label: "Largest first" },
-                { value: "new", label: "Newest first" },
+                { value: "size", label: t("largest") },
+                { value: "new", label: t("newest") },
               ]}
             />
             {canClean && (
               <Button variant="danger" size="sm" onClick={() => setConfirm({ kind: "unused" })}>
                 <TrashIcon size={15} weight="bold" aria-hidden />
-                Delete all unused ({unused.length})
+                {t("deleteUnused", { count: unused.length })}
               </Button>
             )}
           </div>
@@ -169,21 +196,21 @@ export function ImagesWindow({
                   </div>
                   <p className="min-w-0 text-xs leading-snug text-ink-soft">
                     {usage === null
-                      ? "Not used in any club"
+                      ? t("notUsed")
                       : usage.length
-                        ? `Used in ${usage.join(", ")}`
-                        : "Used in a club in your account"}
+                        ? t("usedIn", { places: places(usage) })
+                        : t("usedInAccount")}
                   </p>
                   <Button
                     variant="danger"
                     size="sm"
                     disabled={busy.has(img.id)}
                     onClick={() => ask(img, usage)}
-                    aria-label={`Delete image, ${formatBytes(img.bytes)}`}
+                    aria-label={t("deleteLabel", { size: formatBytes(img.bytes) })}
                     className="mt-auto self-start px-2"
                   >
                     <TrashIcon size={15} weight="bold" aria-hidden />
-                    Delete
+                    {t("delete")}
                   </Button>
                 </div>
               </li>
@@ -197,20 +224,22 @@ export function ImagesWindow({
         onOpenChange={(o) => !o && setConfirm(null)}
         title={
           confirm?.kind === "unused"
-            ? `Delete ${plural(unused.length, "unused image", "unused images")}?`
-            : "Delete this image?"
+            ? t("confirmUnused", { count: unused.length })
+            : t("confirmOne")
         }
         description={
           confirm?.kind === "unused"
-            ? "They aren't used in any club, in your account or in this browser. Your clubs stay as they are."
+            ? t("confirmUnusedBody", { count: unused.length })
             : confirm?.kind === "one"
-              ? `It's used in ${confirm.usage.length ? confirm.usage.join(", ") : "a club in your account"}. Deleting it removes it from there too, here and on your other devices.`
+              ? confirm.usage.length
+                ? t("confirmOneBody", { places: places(confirm.usage) })
+                : t("confirmOneBodyAccount")
               : undefined
         }
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirm(null)}>
-              Keep {confirm?.kind === "unused" && unused.length !== 1 ? "them" : "it"}
+              {t("keep", { count: confirm?.kind === "unused" ? unused.length : 1 })}
             </Button>
             <Button
               variant="destructive"
@@ -221,8 +250,8 @@ export function ImagesWindow({
               }}
             >
               {confirm?.kind === "unused"
-                ? `Delete ${plural(unused.length, "image", "images")}`
-                : "Delete image"}
+                ? t("deleteCount", { count: unused.length })
+                : t("deleteOne")}
             </Button>
           </>
         }

@@ -2,6 +2,8 @@
 export const OPERATOR = {
   name: "enkelt.design",
   cvr: "45871290",
-  country: "Denmark",
   privacyEmail: "privacy@teamsheet11.com",
 } as const;
+
+/** When the privacy policy last changed (yyyy-mm-dd). Shown in the reader's language. */
+export const PRIVACY_UPDATED = "2026-11-14";

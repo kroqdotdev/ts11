@@ -1,0 +1,48 @@
+{
+  "openStudio": "Open the studio",
+  "file": "privacy.txt",
+  "title": "Privacy",
+  "updated": "Last updated {date}.",
+  "without": {
+    "title": "Without an account",
+    "local": "Your clubs, squads, match details and images stay in your browser (in its local storage). They are never sent to us. Graphics are made in your browser too.",
+    "tracking": "There are no analytics, no advertising and no tracking cookies. Fonts are served from teamsheet11.com, not from anyone else."
+  },
+  "controller": {
+    "title": "Who is responsible",
+    "body": "teamsheet11 is run by {name} (CVR {cvr}), Denmark, who is responsible for your data (the data controller). Questions about your data go to <mail>{email}</mail>."
+  },
+  "account": {
+    "title": "With an account",
+    "intro": "An account is optional. If you make one, we store:",
+    "email": "your email address and name, and a hashed password if you use one",
+    "google": "if you sign in with Google, the name, email address and profile picture link Google shares with us",
+    "clubs": "your clubs, squads, match details and design settings",
+    "uploads": "the crests and photos you upload",
+    "sessions": "for each session, when it started, your IP address and your browser's name, to keep the account secure",
+    "use": "We use this only to provide the account: signing you in, saving your clubs, and sending the emails it needs (confirming your address and resetting your password). We don't sell it, we don't use it for marketing, and there are no newsletters.",
+    "basis": "The legal basis is GDPR <nowrap>article 6(1)(b)</nowrap>, providing the service you asked for, and <nowrap>article 6(1)(f)</nowrap>, our legitimate interest in keeping it secure, such as limiting sign-in attempts."
+  },
+  "where": {
+    "title": "Where it is kept",
+    "servers": "The website, the database and uploaded images are on Hetzner servers in Germany. Account emails are sent through Amazon Web Services in Frankfurt, Germany. Both act only on our instructions (they are our data processors). Signing in with Google is covered by Google's own privacy policy.",
+    "links": "Uploaded images can be opened by anyone who has their exact link. The links are long and random, but don't upload anything private."
+  },
+  "cookies": {
+    "title": "Cookies",
+    "body": "There are two cookies. One remembers whether you read the site in English or Danish, for a year. The other is the sign-in cookie, which the account needs to work; it is removed when you sign out. There are no others."
+  },
+  "retention": {
+    "title": "How long it is kept",
+    "body": "Until you delete your account. Deleting it on <account>the account page</account> removes the account, your saved clubs and your uploaded images at once. An account whose email is never confirmed is removed after a week. Copies in database backups are gone within three days. Server logs, which include IP addresses, are kept briefly to stop abuse and are overwritten automatically."
+  },
+  "rights": {
+    "title": "Your rights",
+    "body": "You can see, correct, download or delete your data, and object to how it is used. Most of this you can do yourself on the account page. For anything else, email <mail>{email}</mail> and you'll get an answer within a month.",
+    "complain": "If you're unhappy with how we handle your data, you can complain to <authority>Datatilsynet</authority>, the Danish data protection authority."
+  },
+  "source": {
+    "title": "Open source",
+    "body": "teamsheet11 is open source, so you can check what it does. <source>Read the source code</source>."
+  }
+}

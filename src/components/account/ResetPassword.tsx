@@ -2,14 +2,12 @@
 
 import { CheckCircleIcon, WarningIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { Button, Field, TextInput } from "@/components/ui/controls";
+import { Link } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
-import { authMessage } from "./messages";
-
-const HOW_TO_GET_ONE =
-  "Reset links work once, for one hour. In the studio, choose Sign in, then Forgot your password, to get a new one.";
+import { useAuthMessage } from "./messages";
 
 const studioLink =
   "lofi-press inline-flex h-10 items-center rounded-[4px] border-2 border-card-ink bg-card px-4 text-sm font-semibold text-card-ink shadow-[3px_3px_0_var(--card-ink)]";
@@ -24,6 +22,7 @@ function Outcome({
   title: string;
   children: ReactNode;
 }) {
+  const t = useTranslations("account.resetPage");
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-start gap-3">
@@ -49,7 +48,7 @@ function Outcome({
       </div>
       <div className="flex justify-end">
         <Link href="/studio" className={studioLink}>
-          Go to the studio
+          {t("studio")}
         </Link>
       </div>
     </div>
@@ -75,25 +74,27 @@ export function ResetPassword({
   );
   const [state, setState] = useState<"form" | "expired" | "done">(linkError ? "expired" : "form");
   const ids = { password: useId(), again: useId(), error: useId() };
+  const t = useTranslations("account.resetPage");
+  const { text, message } = useAuthMessage();
 
   if (state === "expired") {
     return (
-      <Outcome tone="problem" title="This link has expired">
-        {HOW_TO_GET_ONE}
+      <Outcome tone="problem" title={t("expired")}>
+        {t("howTo")}
       </Outcome>
     );
   }
   if (!token) {
     return (
-      <Outcome tone="problem" title="This link is incomplete">
-        {HOW_TO_GET_ONE}
+      <Outcome tone="problem" title={t("incomplete")}>
+        {t("howTo")}
       </Outcome>
     );
   }
   if (state === "done") {
     return (
-      <Outcome tone="done" title="Password changed">
-        Sign in with your new password. For safety you&apos;re signed out on every device.
+      <Outcome tone="done" title={t("done")}>
+        {t("doneBody")}
       </Outcome>
     );
   }
@@ -101,11 +102,11 @@ export function ResetPassword({
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (password.length < 8) {
-      setError({ text: "Use at least 8 characters.", field: "password" });
+      setError({ text: text("tooShort"), field: "password" });
       return;
     }
     if (password !== again) {
-      setError({ text: "Those two don't match. Type the same password twice.", field: "again" });
+      setError({ text: text("notSame"), field: "again" });
       return;
     }
     setError(null);
@@ -120,7 +121,7 @@ export function ResetPassword({
       setState("expired");
       return;
     }
-    const m = authMessage(error);
+    const m = message(error);
     setError({ text: m.text, field: m.field === "password" ? "password" : "form" });
   }
 
@@ -134,12 +135,10 @@ export function ResetPassword({
   return (
     <form noValidate onSubmit={submit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <h1 className="font-signage text-[28px] leading-none text-ink">Choose a new password</h1>
-        <p className="text-sm leading-relaxed text-ink-soft">
-          Pick something you don&apos;t use elsewhere. At least 8 characters.
-        </p>
+        <h1 className="font-signage text-[28px] leading-none text-ink">{t("title")}</h1>
+        <p className="text-sm leading-relaxed text-ink-soft">{t("intro")}</p>
       </div>
-      <Field label="New password" htmlFor={ids.password}>
+      <Field label={t("newPassword")} htmlFor={ids.password}>
         <TextInput
           id={ids.password}
           type="password"
@@ -153,7 +152,7 @@ export function ResetPassword({
         />
         {alert("password")}
       </Field>
-      <Field label="Type it again" htmlFor={ids.again}>
+      <Field label={t("again")} htmlFor={ids.again}>
         <TextInput
           id={ids.again}
           type="password"
@@ -169,7 +168,7 @@ export function ResetPassword({
       {alert("form")}
       <div className="flex justify-end">
         <Button type="submit" variant="primary" disabled={busy}>
-          {busy ? "Saving…" : "Save new password"}
+          {busy ? t("saving") : t("save")}
         </Button>
       </div>
     </form>

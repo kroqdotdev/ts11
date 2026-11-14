@@ -1,7 +1,9 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 import { luminance, mix } from "@/lib/color";
+import { toBoardText } from "@/lib/lofi/font";
 import {
   layout,
   paintStadium,
@@ -62,6 +64,9 @@ interface Runner {
 export function LofiStadium(props: StadiumProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const propsRef = useRef(props);
+  // The big screen's header, in the interface language and the scoreboard's letters.
+  const screenTitle = toBoardText(useTranslations("setup")("screenTitle"));
+  const titleRef = useRef(screenTitle);
 
   // Timeline of things that happen in the ground, keyed off prop changes.
   const timeline = useRef({
@@ -82,6 +87,7 @@ export function LofiStadium(props: StadiumProps) {
 
   useEffect(() => {
     propsRef.current = props;
+    titleRef.current = screenTitle;
   });
 
   useEffect(() => {
@@ -265,7 +271,7 @@ export function LofiStadium(props: StadiumProps) {
           ticker: p.ticker,
           offset: reduce ? 0 : now * 0.022,
           grow: tl.grow,
-          title: p.bigScreen ? "CLUB SETUP" : undefined,
+          title: p.bigScreen ? titleRef.current : undefined,
         },
         boards: p.kit
           ? [p.kit.primary, "#f2f5ef", p.kit.secondary, "#11161d"]

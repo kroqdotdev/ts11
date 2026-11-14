@@ -1,5 +1,6 @@
 import { readableOn } from "@/lib/color";
-import { displayName } from "@/lib/format";
+import { textFor } from "@/lib/graphicText";
+import { displayName, formatMatchDate } from "@/lib/format";
 import type { Design, NameStyle, Team } from "@/lib/types";
 import { MiniPitch } from "./LineupPitch";
 import { balance, Crest, fitText, Footer, Heading, MatchMeta, minPx, px, textUnits } from "./parts";
@@ -7,7 +8,16 @@ import { benchPlayers, placedStarters } from "./selection";
 import type { Theme } from "./theme";
 
 /** The armband: a disc with a C, never so small the C can't be read. */
-export function CaptainMark({ theme, size: wanted }: { theme: Theme; size: number }) {
+export function CaptainMark({
+  theme,
+  size: wanted,
+  mark,
+}: {
+  theme: Theme;
+  size: number;
+  /** "C", or "A" for anfører on Danish graphics. */
+  mark: string;
+}) {
   const size = Math.max(wanted, minPx(theme) / 0.64);
   return (
     <span
@@ -26,7 +36,7 @@ export function CaptainMark({ theme, size: wanted }: { theme: Theme; size: numbe
         flexShrink: 0,
       }}
     >
-      C
+      {mark}
     </span>
   );
 }
@@ -49,35 +59,52 @@ export function SubsLine({
 }) {
   const bench = benchPlayers(team);
   if (!design.showSubs || bench.length === 0) return null;
-  const size = px(theme, wanted);
-  const lineOf = (style: NameStyle) =>
-    "SUBS  " +
-    bench
-      .map(
-        (p) =>
-          `${design.showNumbers && p.number.trim() ? p.number + " " : ""}${displayName(p, style)}, `,
-      )
-      .join("");
-  const linesFor = (style: NameStyle) =>
-    width ? Math.ceil((textUnits(lineOf(style)) * theme.font.glyph * size * 1.05) / width) : 1;
-  const style =
-    !width || !maxLines
-      ? design.nameStyle
-      : (([design.nameStyle, "initial", "surname"] as NameStyle[]).find(
-          (st) => linesFor(st) <= maxLines,
-        ) ?? "surname");
+  const t = textFor(team);
+  const label = (p: (typeof bench)[number], style: NameStyle) =>
+    `${design.showNumbers && p.number.trim() ? p.number + " " : ""}${displayName(p, style, team.language)},`;
+  // Lines the list takes at `size`: the label, then each player as an unbreakable
+  // chunk (a chunk wider than the line breaks between its words).
+  const linesFor = (style: NameStyle, size: number) => {
+    if (!width) return 1;
+    const room = width / (theme.font.glyph * size * 1.05);
+    let lines = 1;
+    let used = textUnits(t.subs) + 0.6;
+    for (const p of bench) {
+      const chunk = textUnits(label(p, style)) + 0.24;
+      if (used + chunk <= room) used += chunk;
+      else {
+        lines += Math.max(1, Math.ceil(chunk / room));
+        used = chunk > room ? chunk % room : chunk;
+      }
+    }
+    return lines;
+  };
+  let size = px(theme, wanted);
+  let style = design.nameStyle;
+  if (width && maxLines) {
+    const styles: NameStyle[] = [design.nameStyle, "initial", "surname"];
+    style = styles.find((st) => linesFor(st, size) <= maxLines) ?? "surname";
+    // Still too long (a narrow column, long words): smaller type, never below the floor.
+    while (linesFor(style, size) > maxLines && size > minPx(theme)) {
+      size = Math.max(minPx(theme), size * 0.92);
+    }
+  }
+  // At the smallest size and still over budget: set the lines closer together.
+  const tight = !!width && !!maxLines && linesFor(style, size) > maxLines;
   return (
-    <div style={{ fontSize: size, lineHeight: 1.35 * theme.font.leading }}>
+    <div style={{ fontSize: size, lineHeight: (tight ? 1.15 : 1.35) * theme.font.leading }}>
       <span style={{ color: theme.accent, fontWeight: theme.font.heavy, marginRight: size * 0.6 }}>
-        Subs
+        {t.subs}
       </span>
       {bench.map((p, i) => (
         <span key={p.id}>
-          <span style={{ whiteSpace: "nowrap" }}>
+          {/* Each player stays on one line, unless their name alone is wider than the
+              space (a name with middle names): then it breaks between its own words. */}
+          <span style={{ display: "inline-block", maxWidth: "100%" }}>
             {design.showNumbers && p.number.trim() && (
               <span style={{ color: theme.muted }}>{p.number} </span>
             )}
-            {displayName(p, style)}
+            {displayName(p, style, team.language)}
             {i < bench.length - 1 && <span style={{ color: theme.muted }}>,</span>}
           </span>{" "}
         </span>
@@ -96,7 +123,7 @@ export function LineupList({ team, design, theme }: { team: Team; design: Design
     let best: { style: (typeof order)[number]; size: number } | null = null;
     for (const style of order) {
       const units = starters
-        .map((s) => textUnits(displayName(s.player!, style)))
+        .map((s) => textUnits(displayName(s.player!, style, team.language)))
         .sort((a, b) => a - b);
       const typical = Math.max(
         10,
@@ -119,9 +146,11 @@ export function LineupList({ team, design, theme }: { team: Team; design: Design
   const m = team.match;
   const linesOf = (text: string, size: number) =>
     text ? Math.ceil((textUnits(text) * theme.font.glyph * size) / headerW) : 0;
+  const t = textFor(team);
   const metaLines =
-    linesOf(m.opponent.trim() ? `vs ${m.opponent}` : "", metaSize * 1.25) * 1.25 +
-    linesOf(`SAT 14 NOV 15:00 ${m.venue}`, metaSize);
+    linesOf(m.opponent.trim() ? `${m.isHome ? t.vs : t.at} ${m.opponent}` : "", metaSize * 1.25) *
+      1.25 +
+    linesOf(`${formatMatchDate(m.date, team.language)}  ${m.kickoff}  ${m.venue}`, metaSize);
   const headerH = Math.max(
     crestSize,
     headSize * 0.86 * theme.font.leading + 18 * u + metaSize * (metaLines + 0.5) * 1.05,
@@ -140,7 +169,7 @@ export function LineupList({ team, design, theme }: { team: Team; design: Design
     Math.min(rowH * 0.66, (tall ? 84 : 66) * u),
     listW / (1 + numColFor * 0.5),
   );
-  const names = starters.map((s) => displayName(s.player!, nameStyle));
+  const names = starters.map((s) => displayName(s.player!, nameStyle, team.language));
 
   const numCol = design.showNumbers ? 1.55 : 0;
   const glyph = theme.font.glyph;
@@ -196,7 +225,7 @@ export function LineupList({ team, design, theme }: { team: Team; design: Design
       // Too long: try the surname alone, then condense, then (only this row) shrink,
       // and at the readable minimum, break over two lines rather than shrink further.
       if (widthAt(text, nameSize) > room && nameStyle !== "surname") {
-        const surname = displayName(s.player!, "surname");
+        const surname = displayName(s.player!, "surname", team.language);
         if (widthAt(surname, nameSize) < widthAt(text, nameSize)) text = surname;
       }
       const need = widthAt(text, nameSize);
@@ -350,7 +379,9 @@ export function LineupList({ team, design, theme }: { team: Team; design: Design
                   ))
                 : rowsOut[i].text}
             </span>
-            {rowsOut[i].captain && <CaptainMark theme={theme} size={captainSize} />}
+            {rowsOut[i].captain && (
+              <CaptainMark theme={theme} size={captainSize} mark={textFor(team).captain} />
+            )}
           </div>
         ))}
       </div>

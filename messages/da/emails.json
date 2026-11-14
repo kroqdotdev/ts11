@@ -1,0 +1,17 @@
+{
+  "fallback": "Virker knappen ikke, så kopiér linket ind i din browser:",
+  "verify": {
+    "subject": "Bekræft din e-mail til {app}",
+    "heading": "Bekræft din e-mail",
+    "body": "Bekræft adressen, så bliver dine klubber gemt på din konto og dukker op på alle de enheder, du logger ind på.",
+    "button": "Bekræft e-mail",
+    "footer": "Linket virker i 24 timer. Har du ikke oprettet en konto, så se bort fra denne e-mail – så bliver der ikke gemt nogen konto."
+  },
+  "reset": {
+    "subject": "Nulstil din adgangskode til {app}",
+    "heading": "Vælg en ny adgangskode",
+    "body": "Nogen har bedt om at nulstille adgangskoden til din konto. Var det dig, så vælg en ny med knappen nedenfor.",
+    "button": "Vælg ny adgangskode",
+    "footer": "Linket virker i en time. Har du ikke bedt om det, så se bort fra denne e-mail – din adgangskode bliver ikke ændret."
+  }
+}

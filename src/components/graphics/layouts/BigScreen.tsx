@@ -3,6 +3,7 @@
  * graphic played on a big screen hanging over the stand.
  */
 import type { CSSProperties, ReactNode } from "react";
+import { subsHeadline, textFor } from "@/lib/graphicText";
 import { alpha, mix, readableOn, SNOW } from "@/lib/color";
 import { displayName, formatMatchDate } from "@/lib/format";
 import { stadiumPaths } from "@/lib/lofi/stadium";
@@ -438,7 +439,7 @@ export function ScreenFixture(props: LayoutProps) {
                           theme,
                           Math.min(
                             crest * 0.5,
-                            fit(f.kickoff || "v", width * 0.24, 140 * u, theme),
+                            fit(f.kickoff || textFor(team).vStacked, width * 0.24, 140 * u, theme),
                           ),
                         ),
                         fontWeight: theme.font.heavy,
@@ -446,7 +447,7 @@ export function ScreenFixture(props: LayoutProps) {
                         fontVariantNumeric: "tabular-nums",
                       }}
                     >
-                      {f.kickoff || "v"}
+                      {f.kickoff || textFor(team).vStacked}
                     </span>
                   </div>
                   <Club
@@ -741,7 +742,7 @@ export function ScreenLineup(props: LayoutProps) {
                         <span
                           style={{ fontSize: legible(theme, size * 0.6), color: litAccent(theme) }}
                         >
-                          (C)
+                          ({textFor(team).captain})
                         </span>
                       )}
                     </div>
@@ -759,7 +760,9 @@ export function ScreenLineup(props: LayoutProps) {
                   color: alpha(SNOW, 0.75),
                 }}
               >
-                <span style={{ color: litAccent(theme), fontWeight: theme.font.heavy }}>Subs </span>
+                <span style={{ color: litAccent(theme), fontWeight: theme.font.heavy }}>
+                  {textFor(team).subs}{" "}
+                </span>
                 {bench.join(", ")}
               </div>
             )}
@@ -857,7 +860,7 @@ export function ScreenPitch(props: LayoutProps) {
                 fontSize: legible(theme, size * 0.26),
               }}
             >
-              C
+              {textFor(team).captain}
             </span>
           )}
         </div>
@@ -895,7 +898,9 @@ export function ScreenPitch(props: LayoutProps) {
         color: alpha(SNOW, 0.75),
       }}
     >
-      <span style={{ color: litAccent(theme), fontWeight: theme.font.heavy }}>Subs </span>
+      <span style={{ color: litAccent(theme), fontWeight: theme.font.heavy }}>
+        {textFor(team).subs}{" "}
+      </span>
       {bench.join(", ")}
     </div>
   ) : null;
@@ -943,10 +948,7 @@ export function ScreenSubs(props: LayoutProps) {
   const { u } = theme;
   const byId = new Map(team.players.map((p) => [p.id, p]));
   const subs = team.match.subs.slice(0, 5);
-  const headline =
-    subs.length === 1 && design.headlines.subs === "Substitutions"
-      ? "Substitution"
-      : design.headlines.subs;
+  const headline = subsHeadline(design, team, subs.length);
   return (
     <Stage {...props}>
       {({ width, height }) => {
@@ -958,7 +960,7 @@ export function ScreenSubs(props: LayoutProps) {
           .flatMap((x) => [x.onId, x.offId])
           .map((id) => {
             const p = id ? byId.get(id) : undefined;
-            return p ? displayName(p, design.nameStyle) : "";
+            return p ? displayName(p, design.nameStyle, team.language) : "";
           });
         const longest = names.reduce((a, b) => (b.length > a.length ? b : a), "");
         // Narrow screens put the name under the number; wide ones beside it.
@@ -1003,7 +1005,7 @@ export function ScreenSubs(props: LayoutProps) {
                   textAlign: stacked ? "center" : on ? "left" : "right",
                 }}
               >
-                {p ? displayName(p, design.nameStyle) : ""}
+                {p ? displayName(p, design.nameStyle, team.language) : ""}
               </span>
             </div>
           );
@@ -1209,7 +1211,7 @@ export function ScreenFixtures(props: LayoutProps) {
               }}
             >
               {rows.map((f, i) => {
-                const [weekday, day, month] = formatMatchDate(f.date).split(" ");
+                const [weekday, day, month] = formatMatchDate(f.date, team.language).split(" ");
                 return (
                   <div
                     key={f.id}
@@ -1247,7 +1249,7 @@ export function ScreenFixtures(props: LayoutProps) {
                         fontWeight: theme.font.heavy,
                       }}
                     >
-                      {f.isHome ? "H" : "A"}
+                      {f.isHome ? textFor(team).homeLetter : textFor(team).awayLetter}
                     </span>
                     <span
                       style={{

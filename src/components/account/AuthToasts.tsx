@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useSession } from "@/lib/auth-client";
@@ -20,6 +21,7 @@ function clearFlags() {
  */
 export function AuthToasts() {
   const { data, isPending } = useSession();
+  const t = useTranslations("account.toasts");
   const done = useRef(false);
 
   useEffect(() => {
@@ -34,30 +36,24 @@ export function AuthToasts() {
 
     if (q.get("verified") === "1") {
       if (q.get("error")) {
-        toast.error("That link has expired", {
-          description: user
-            ? "Send a new one from the yellow message at the top."
-            : "Sign in, and we'll offer to send a new one.",
+        toast.error(t("expired"), {
+          description: user ? t("expiredSignedIn") : t("expiredSignedOut"),
         });
       } else if (user) {
-        toast("Email confirmed", {
-          description: "Your clubs save to your account from now on.",
-        });
+        toast(t("confirmed"), { description: t("confirmedSignedIn") });
       } else {
-        toast("Email confirmed", {
-          description: "Sign in to save your clubs to your account.",
-          action: { label: "Sign in", onClick: () => useAuthDialog.getState().show("signin") },
+        toast(t("confirmed"), {
+          description: t("confirmedSignedOut"),
+          action: { label: t("signIn"), onClick: () => useAuthDialog.getState().show("signin") },
         });
       }
     } else if (q.get("signedin") === "1" && user) {
-      toast("Signed in", { description: user.email });
+      toast(t("signedIn"), { description: user.email });
     } else if (q.has("signinerror") || q.has("error")) {
-      toast.error("Signing in with Google didn't work", {
-        description: "Try again, or use your email and a password.",
-      });
+      toast.error(t("googleFailed"), { description: t("googleFailedHint") });
     }
     clearFlags();
-  }, [data, isPending]);
+  }, [data, isPending, t]);
 
   return null;
 }

@@ -24,6 +24,7 @@ import {
   XIcon,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { useTranslations } from "next-intl";
 import { useId, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button, Section, Segmented, Select } from "@/components/ui/controls";
@@ -31,9 +32,7 @@ import { RovingList } from "@/components/ui/roving";
 import { FORMATIONS, formationSlots, TEAM_SIZES } from "@/lib/formation";
 import { FIELD } from "@/lib/issues";
 import { useActiveTeam, useStudio, useUi } from "@/lib/store";
-import type { Player, Position, TeamSize } from "@/lib/types";
-
-const ROLE: Record<Position, string> = { GK: "GK", DF: "DEF", MF: "MID", FW: "ATT" };
+import type { Player, TeamSize } from "@/lib/types";
 
 function useListSensors() {
   return useSensors(
@@ -46,6 +45,7 @@ function SortableRow({ id, children }: { id: string; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   });
+  const t = useTranslations("studio.lineup");
   return (
     <li
       ref={setNodeRef}
@@ -58,7 +58,7 @@ function SortableRow({ id, children }: { id: string; children: ReactNode }) {
     >
       <button
         type="button"
-        aria-label="Drag to reorder"
+        aria-label={t("drag")}
         data-cell
         className="grid h-full w-8 shrink-0 cursor-grab touch-none place-items-center text-ink-soft hover:text-ink active:cursor-grabbing"
         {...attributes}
@@ -77,11 +77,12 @@ const inlineInput =
 /** Number and name, edited in place. Changes go to the squad, so every graphic updates. */
 function PlayerLabel({ player }: { player: Player }) {
   const updatePlayer = useStudio((st) => st.updatePlayer);
+  const t = useTranslations("studio.lineup");
   return (
     <span className="flex min-w-0 flex-1 items-center gap-1">
       <input
         data-cell
-        aria-label={`Shirt number for ${player.name || "player"}`}
+        aria-label={player.name ? t("numberFor", { name: player.name }) : t("numberForPlayer")}
         inputMode="numeric"
         maxLength={3}
         value={player.number}
@@ -90,9 +91,9 @@ function PlayerLabel({ player }: { player: Player }) {
       />
       <input
         data-cell
-        aria-label={player.name ? `Name: ${player.name}` : "Player name"}
+        aria-label={player.name ? t("nameOf", { name: player.name }) : t("playerName")}
         value={player.name}
-        placeholder="Player name"
+        placeholder={t("playerName")}
         onChange={(e) => updatePlayer(player.id, { name: e.target.value })}
         className={clsx(inlineInput, "flex-1 placeholder:text-ink-soft")}
       />
@@ -151,6 +152,7 @@ function NameEntry({
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const t = useTranslations("studio");
   const typed = value.trim();
   const matches = matchPlayers(candidates, typed);
   // The last option adds a new player, unless the typed name is exactly a squad player.
@@ -168,10 +170,12 @@ function NameEntry({
     if (o.kind === "player") {
       if (target === "bench") selectPlayer(o.player.id, "bench");
       else assignSlot(target, o.player.id);
-      toast.success(`${o.player.name} ${target === "bench" ? "is on the bench" : "is in the XI"}`);
+      toast.success(
+        t(target === "bench" ? "lineup.onBench" : "lineup.inXi", { name: o.player.name }),
+      );
     } else {
       placeByName(typed, target);
-      toast.success(`Added ${typed} to the squad`);
+      toast.success(t("lineup.addedToSquad", { name: typed }));
     }
     setValue("");
     setOpen(false);
@@ -227,7 +231,7 @@ function NameEntry({
         <ul
           id={listId}
           role="listbox"
-          aria-label="Squad players"
+          aria-label={t("lineup.squadPlayers")}
           className="absolute top-full right-0 left-0 z-30 mt-1 flex flex-col border-2 border-card-ink bg-paper py-1 text-sm shadow-[3px_3px_0_var(--edge)]"
         >
           {options.map((o, i) => (
@@ -251,13 +255,15 @@ function NameEntry({
                     {o.player.number || "–"}
                   </span>
                   <span className="min-w-0 flex-1 truncate">{o.player.name}</span>
-                  <span className="text-[11px] opacity-70">{ROLE[o.player.position]}</span>
+                  <span className="text-[11px] opacity-70">
+                    {t(`positions.${o.player.position}`)}
+                  </span>
                 </>
               ) : (
                 <>
                   <span className="w-6 text-right font-bold">+</span>
                   <span className="min-w-0 flex-1 truncate">
-                    Add &lsquo;{typed}&rsquo; as a new player
+                    {t("lineup.addNew", { name: typed })}
                   </span>
                 </>
               )}
@@ -290,6 +296,8 @@ export function LineupPanel() {
   const listId = useId();
   const setPanel = useUi((st) => st.setPanel);
   const keysHint = useId();
+  const t = useTranslations("studio.lineup");
+  const tp = useTranslations("studio.positions");
 
   // Sortable ids must be unique and stable; empty slots get a slot-based id.
   const starterIds = lineup.starters.map((id, i) => id ?? `empty-${i}`);
@@ -314,51 +322,52 @@ export function LineupPanel() {
 
   return (
     <>
-      <Section title="Shape">
+      <Section title={t("shape")}>
         <div className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-medium">Players per side</span>
+          <span className="text-[13px] font-medium">{t("perSide")}</span>
           <Segmented<`${TeamSize}`>
-            label="Players per side"
+            label={t("perSide")}
             value={`${lineup.size}`}
             onChange={(v) => setTeamSize(Number(v) as TeamSize)}
             options={TEAM_SIZES.map((n) => ({
               value: `${n}` as `${TeamSize}`,
               label: `${n}`,
-              title: `${n}-a-side`,
+              title: t("aSide", { count: n }),
             }))}
           />
         </div>
         <div className="flex items-end gap-2">
           <Select
-            label="Formation"
+            label={t("formation")}
             value={lineup.formation}
             items={formationItems}
             onChange={setFormation}
             className="flex-1"
           />
           {hasOverrides && (
-            <Button onClick={() => s().clearOverrides()} title="Undo pitch drags">
+            <Button onClick={() => s().clearOverrides()} title={t("undoDrags")}>
               <ArrowCounterClockwiseIcon size={16} />
-              Reset positions
+              {t("resetPositions")}
             </Button>
           )}
         </div>
       </Section>
 
       <Section
-        title={`Starting ${lineup.size === 11 ? "XI" : lineup.size} (${starterCount}/${lineup.size})`}
+        title={t(lineup.size === 11 ? "startingXi" : "startingN", {
+          count: starterCount,
+          size: lineup.size,
+        })}
       >
         <p id={keysHint} className="-mt-2 text-xs text-ink-soft">
-          Type a name into an empty slot, or click any name to change it. Drag the handle to swap
-          positions; the order runs from goalkeeper to attack, left to right. With a keyboard, the
-          arrow keys move around the list.
+          {t("keysHint")}
         </p>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onStartersEnd}>
           <SortableContext items={starterIds} strategy={verticalListSortingStrategy}>
             <RovingList as="ol" aria-describedby={keysHint} className="flex flex-col gap-1.5">
               {lineup.starters.map((id, i) => {
                 const player = id ? byId.get(id) : undefined;
-                const role = ROLE[slots[i]?.role ?? "MF"];
+                const role = tp(slots[i]?.role ?? "MF");
                 return (
                   <SortableRow key={starterIds[i]} id={starterIds[i]}>
                     <span className="w-9 shrink-0 text-[11px] font-semibold text-ink-soft">
@@ -371,8 +380,8 @@ export function LineupPanel() {
                           type="button"
                           data-cell
                           aria-pressed={lineup.captainId === player.id}
-                          aria-label={`Make ${player.name} captain`}
-                          title="Captain"
+                          aria-label={t("makeCaptain", { name: player.name })}
+                          title={t("captain")}
                           onClick={() =>
                             s().setCaptain(lineup.captainId === player.id ? null : player.id)
                           }
@@ -383,15 +392,15 @@ export function LineupPanel() {
                               : "text-ink-soft hover:bg-well hover:text-ink",
                           )}
                         >
-                          C
+                          {t("captainLetter")}
                         </button>
                         <Button
                           data-cell
                           variant="ghost"
                           size="icon"
                           className="size-8"
-                          aria-label={`Move ${player.name} to the bench`}
-                          title="Move to bench"
+                          aria-label={t("toBench", { name: player.name })}
+                          title={t("toBenchTitle")}
                           onClick={() => s().selectPlayer(player.id, "bench")}
                         >
                           <ArrowDownIcon size={15} />
@@ -404,7 +413,7 @@ export function LineupPanel() {
                         candidates={free}
                         listId={listId}
                         id={i === firstEmpty ? FIELD.starters : undefined}
-                        placeholder={`Add ${slots[i]?.role === "GK" ? "goalkeeper" : "player"}`}
+                        placeholder={t(slots[i]?.role === "GK" ? "addKeeper" : "addPlayer")}
                       />
                     )}
                   </SortableRow>
@@ -415,15 +424,11 @@ export function LineupPanel() {
         </DndContext>
       </Section>
 
-      <Section title={`Bench (${lineup.bench.length})`}>
+      <Section title={t("bench", { count: lineup.bench.length })}>
         {lineup.bench.length > 0 && (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onBenchEnd}>
             <SortableContext items={lineup.bench} strategy={verticalListSortingStrategy}>
-              <RovingList
-                as="ol"
-                aria-label="Bench, arrow keys move around the list"
-                className="flex flex-col gap-1.5"
-              >
+              <RovingList as="ol" aria-label={t("benchList")} className="flex flex-col gap-1.5">
                 {lineup.bench.map((id) => {
                   const player = byId.get(id);
                   if (!player) return null;
@@ -435,13 +440,11 @@ export function LineupPanel() {
                         variant="ghost"
                         size="icon"
                         className="size-8"
-                        aria-label={`Move ${player.name} into the starting line-up`}
-                        title="Move to starting line-up"
+                        aria-label={t("toXi", { name: player.name })}
+                        title={t("toXiTitle")}
                         onClick={() => {
                           if (!s().selectPlayer(id, "xi"))
-                            toast("The starting line-up is full", {
-                              description: "Move someone to the bench first.",
-                            });
+                            toast(t("full"), { description: t("fullHint") });
                         }}
                       >
                         <ArrowUpIcon size={15} />
@@ -451,8 +454,8 @@ export function LineupPanel() {
                         variant="ghost"
                         size="icon"
                         className="size-8"
-                        aria-label={`Leave ${player.name} out`}
-                        title="Leave out"
+                        aria-label={t("leaveOut", { name: player.name })}
+                        title={t("leaveOutTitle")}
                         onClick={() => s().selectPlayer(id, "out")}
                       >
                         <XIcon size={15} />
@@ -469,30 +472,23 @@ export function LineupPanel() {
             target="bench"
             candidates={unpicked}
             listId={`${listId}-bench`}
-            placeholder="Add a substitute"
+            placeholder={t("addSub")}
           />
         </div>
       </Section>
 
-      <Section title={`Not selected (${unpicked.length})`}>
+      <Section title={t("notSelected", { count: unpicked.length })}>
         {players.length === 0 ? (
           <div className="flex flex-col items-start gap-3 rounded-md bg-well p-4 text-sm">
-            <p className="text-ink-soft">
-              Your squad is empty. Type names into the slots above, or paste your whole squad list
-              in one go.
-            </p>
+            <p className="text-ink-soft">{t("emptySquad")}</p>
             <Button size="sm" onClick={() => setPanel("squad")}>
-              Open squad
+              {t("openSquad")}
             </Button>
           </div>
         ) : unpicked.length === 0 ? (
-          <p className="text-sm text-ink-soft">Everyone in the squad has been picked.</p>
+          <p className="text-sm text-ink-soft">{t("allPicked")}</p>
         ) : (
-          <RovingList
-            as="ul"
-            aria-label="Not selected, arrow keys move around the list"
-            className="flex flex-col gap-1.5"
-          >
+          <RovingList as="ul" aria-label={t("notSelectedList")} className="flex flex-col gap-1.5">
             {unpicked.map((p) => (
               <li
                 key={p.id}
@@ -504,24 +500,22 @@ export function LineupPanel() {
                   data-cell
                   size="sm"
                   variant="ghost"
-                  aria-label={`Start ${p.name}`}
+                  aria-label={t("start", { name: p.name })}
                   onClick={() => {
                     if (!s().selectPlayer(p.id, "xi"))
-                      toast("The starting line-up is full", {
-                        description: "Move someone to the bench first.",
-                      });
+                      toast(t("full"), { description: t("fullHint") });
                   }}
                 >
-                  Start
+                  {t("startButton")}
                 </Button>
                 <Button
                   data-cell
                   size="sm"
                   variant="ghost"
-                  aria-label={`Put ${p.name} on the bench`}
+                  aria-label={t("toBenchFromOut", { name: p.name })}
                   onClick={() => s().selectPlayer(p.id, "bench")}
                 >
-                  Bench
+                  {t("benchButton")}
                 </Button>
               </li>
             ))}

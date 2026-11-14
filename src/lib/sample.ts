@@ -1,6 +1,7 @@
 import { demoTeam } from "./demo";
+import { graphicsLanguage } from "./language";
 import { matchScore, scorerOf } from "./score";
-import type { Design, Match, Player, Team } from "./types";
+import type { Design, Language, Match, Player, Team } from "./types";
 
 /** Ids of sample players start with this, so they never collide with the club's own. */
 const SAMPLE_PREFIX = "sample-";
@@ -21,7 +22,9 @@ export interface Sampled {
  */
 export function withSamples(team: Team, design: Design): Sampled {
   const kind = design.kind;
-  const demo = demoTeam("sample", team.match.date);
+  // Sample content is printed, so it comes in the club's graphics language.
+  const language = graphicsLanguage(team);
+  const demo = demoTeam("sample", team.match.date, language);
   const filled: SampleNote[] = [];
   let players = team.players;
   let lineup = team.lineup;
@@ -73,7 +76,7 @@ export function withSamples(team: Team, design: Design): Sampled {
         {
           id: "sample-goal",
           side: "us",
-          name: scorer?.name ?? "Price",
+          name: scorer?.name ?? demo.players[7].name.split(" ").at(-1) ?? "",
           playerId: scorer?.id ?? null,
           minute: "23",
         },
@@ -110,7 +113,7 @@ export function withSamples(team: Team, design: Design): Sampled {
       match = {
         ...match,
         motmId: pick.id,
-        motmNote: match.motmNote || motmNote(pick, team, match),
+        motmNote: match.motmNote || motmNote(pick, team, match, language),
       };
     else {
       borrow();
@@ -118,7 +121,7 @@ export function withSamples(team: Team, design: Design): Sampled {
       match = {
         ...match,
         motmId: demo.match.motmId,
-        motmNote: match.motmNote || (sample ? motmNote(sample, team, match) : ""),
+        motmNote: match.motmNote || (sample ? motmNote(sample, team, match, language) : ""),
       };
     }
     filled.push("motm");
@@ -133,37 +136,67 @@ export function withSamples(team: Team, design: Design): Sampled {
   return { team: { ...team, players, lineup, match, fixtures }, filled };
 }
 
-/** "the opponent and goals", for the sample label. */
-export function describeSamples(filled: SampleNote[]): string {
-  const words: Record<SampleNote, string> = {
-    opponent: "opponent",
-    starters: "line-up",
-    goals: "goal",
-    subs: "substitutions",
-    motm: "player of the match",
-    fixtures: "fixtures",
-  };
-  const list = filled.map((f) => words[f]);
-  return list.length < 2 ? (list[0] ?? "") : `${list.slice(0, -1).join(", ")} and ${list.at(-1)}`;
-}
+type MotmLine =
+  | "hatTrick"
+  | "twoCaptain"
+  | "two"
+  | "oneCaptain"
+  | "one"
+  | "keeperClean"
+  | "keeper"
+  | "backClean"
+  | "back"
+  | "captain"
+  | "forward"
+  | "midfield";
+
+const MOTM_LINES: Record<Language, Record<MotmLine, string>> = {
+  en: {
+    hatTrick: "A hat-trick to remember",
+    twoCaptain: "Two goals and the armband",
+    two: "Two goals and a shift",
+    oneCaptain: "On the scoresheet with the armband on",
+    one: "On the scoresheet",
+    keeperClean: "Kept a clean sheet",
+    keeper: "Saves that kept us in it",
+    backClean: "A clean sheet at the back",
+    back: "Won everything at the back",
+    captain: "Led from the front",
+    forward: "Ran the line all afternoon",
+    midfield: "Ran the midfield all afternoon",
+  },
+  da: {
+    hatTrick: "Et hattrick, der bliver husket",
+    twoCaptain: "To mål og anførerbindet",
+    two: "To mål og masser af slid",
+    oneCaptain: "Scorede med anførerbindet om armen",
+    one: "Fik sit navn på måltavlen",
+    keeperClean: "Holdt buret rent",
+    keeper: "Redninger, der holdt os inde i kampen",
+    backClean: "Holdt nullet bagtil",
+    back: "Vandt alt bagtil",
+    captain: "Gik forrest hele kampen",
+    forward: "Plagede forsvaret hele eftermiddagen",
+    midfield: "Styrede midtbanen hele eftermiddagen",
+  },
+};
 
 /**
  * A sample line under the player of the match that fits the actual match: goals
  * only when they scored, a clean sheet only when there was one, the armband only
  * for the captain.
  */
-function motmNote(player: Player, team: Team, match: Match): string {
+function motmNote(player: Player, team: Team, match: Match, language: Language): string {
+  const lines = MOTM_LINES[language];
   const goals = match.goals.filter((g) => scorerOf(team, g)?.id === player.id).length;
   const score = matchScore(match);
   const captain = team.lineup.captainId === player.id;
-  if (goals >= 3) return "A hat-trick to remember";
-  if (goals === 2) return captain ? "Two goals and the armband" : "Two goals and a shift";
-  if (goals === 1) return captain ? "On the scoresheet with the armband on" : "On the scoresheet";
+  if (goals >= 3) return lines.hatTrick;
+  if (goals === 2) return captain ? lines.twoCaptain : lines.two;
+  if (goals === 1) return captain ? lines.oneCaptain : lines.one;
   const cleanSheet = match.goals.length > 0 || score.us + score.them > 0 ? score.them === 0 : false;
-  if (player.position === "GK")
-    return cleanSheet ? "Kept a clean sheet" : "Saves that kept us in it";
-  if (player.position === "DF")
-    return cleanSheet ? "A clean sheet at the back" : "Won everything at the back";
-  if (captain) return "Led from the front";
-  return player.position === "FW" ? "Ran the line all afternoon" : "Ran the midfield all afternoon";
+  if (player.position === "GK") return cleanSheet ? lines.keeperClean : lines.keeper;
+  if (player.position === "DF") return cleanSheet ? lines.backClean : lines.back;
+  if (captain) return lines.captain;
+  return player.position === "FW" ? lines.forward : lines.midfield;
 }

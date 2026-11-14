@@ -1,4 +1,5 @@
 import { TShirtIcon } from "@phosphor-icons/react/ssr";
+import { textFor } from "@/lib/graphicText";
 import type { CSSProperties } from "react";
 import { alpha, contrast, readableOn } from "@/lib/color";
 import { displayName, initials } from "@/lib/format";
@@ -75,6 +76,7 @@ function planLabels(
   theme: Theme,
   rect: Rect,
   size: number,
+  team: Pick<Team, "language">,
 ): Map<number, LabelPlan> {
   const plans = new Map<number, LabelPlan>();
   const floor = minPx(theme);
@@ -97,8 +99,8 @@ function planLabels(
   const order = [...shown].sort((a, b) => a.y - b.y || a.x - b.x);
   for (const pl of order) {
     const { x, y } = pos(pl);
-    const full = displayName(pl.player!, design.nameStyle);
-    const surname = displayName(pl.player!, "surname");
+    const full = displayName(pl.player!, design.nameStyle, team.language);
+    const surname = displayName(pl.player!, "surname", team.language);
     const options: string[][] = [[full]];
     if (surname !== full) options.push([surname]);
     const two = splitAt(surname);
@@ -266,7 +268,7 @@ function Token({
               translate: "-35% -20%",
             }}
           >
-            <CaptainMark theme={theme} size={size * 0.3} />
+            <CaptainMark theme={theme} size={size * 0.3} mark={textFor(team).captain} />
           </div>
         )}
       </div>
@@ -304,7 +306,7 @@ export function LineupPitch({ team, design, theme }: { team: Team; design: Desig
   const rect = pitchRect(theme, design);
   const size = tokenSize(theme, rect, team.lineup.size);
   const placed = placedStarters(team);
-  const labels = planLabels(placed, design, theme, rect, size);
+  const labels = planLabels(placed, design, theme, rect, size, team);
   const crestSize = (tall ? 160 : 118) * u;
 
   return (

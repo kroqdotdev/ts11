@@ -29,6 +29,10 @@ const GLYPHS: Record<string, string> = {
   X: "10001 10001 01010 00100 01010 10001 10001",
   Y: "10001 10001 01010 00100 00100 00100 00100",
   Z: "11111 00001 00010 00100 01000 10000 11111",
+  // Danish letters, so club names and Danish signs are spelt as they should be.
+  Æ: "01111 10100 10100 11111 10100 10100 10111",
+  Ø: "01111 10011 10101 10101 10101 11001 11110",
+  Å: "01110 01010 01110 10001 11111 10001 10001",
   "0": "01110 10001 10011 10101 11001 10001 01110",
   "1": "00100 01100 00100 00100 00100 00100 01110",
   "2": "01110 10001 00001 00010 00100 01000 11111",
@@ -97,16 +101,15 @@ export function eachTextPixel(
   }
 }
 
-/** Reduces any text to what the pixel font can draw: A to Z, digits and a little punctuation. */
+/**
+ * Reduces any text to what the pixel font can draw: A to Z, Æ, Ø and Å, digits and a
+ * little punctuation. Other accents are dropped (É → E).
+ */
 export function toBoardText(text: string): string {
   return text
-    .replace(/æ/gi, "AE")
-    .replace(/ø/gi, "O")
-    .replace(/ß/g, "SS")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase()
-    .replace(/[^A-Z0-9 \-:.,!?'&+/]/g, "")
+    .replace(/[^ÆØÅ]/g, (ch) => ch.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))
+    .replace(/[^A-Z0-9ÆØÅ \-:.,!?'&+/]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }

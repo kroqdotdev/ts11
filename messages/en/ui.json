@@ -1,0 +1,29 @@
+{
+  "close": "Close",
+  "storageFull": {
+    "title": "Browser storage is full",
+    "description": "Your last change was not saved. Remove a large photo and try again."
+  },
+  "color": {
+    "pick": "Pick {label}"
+  },
+  "image": {
+    "upload": "Upload",
+    "replace": "Replace",
+    "remove": "Remove {label}",
+    "failed": "Could not use that image.",
+    "notImage": "That file is not an image.",
+    "unreadableFile": "Could not read that file.",
+    "unreadable": "Could not read that image. Try a PNG or JPEG.",
+    "noCanvas": "Your browser could not process the image."
+  },
+  "crest": {
+    "label": "Crest",
+    "onWhite": "This crest is on a white square. Graphics put it on a neat plate, or remove the background to place it straight on the colours.",
+    "onSolid": "This crest is on a solid square. Graphics put it on a neat plate, or remove the background to place it straight on the colours.",
+    "removeWhite": "Remove white background",
+    "remove": "Remove background",
+    "removed": "Background removed",
+    "removeFailed": "Could not remove the background. Try a PNG with a transparent one."
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "chip": {
+    "loading": "Loading…",
+    "merging": "Choose what to keep",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "offline": "Offline, will retry"
+  },
+  "notSaved": {
+    "label": "Not saved",
+    "body": "{reason} Everything is still in this browser.",
+    "link": "Go to storage and account"
+  },
+  "reason": {
+    "refused": "Your account refused the last change.",
+    "clubTooLarge": "A club is too big to save. Remove some players or images from it.",
+    "inlineImage": "An image couldn't be uploaded, so that club wasn't saved.",
+    "tooMany": "Your account has the most clubs it can hold (50). Delete one to save a new one.",
+    "badData": "A club couldn't be read and wasn't saved.",
+    "quota": "Your image storage is full. Delete images you no longer use to make room.",
+    "imageTooLarge": "Images can be up to {size}.",
+    "imageTooBig": "Images can be up to {side} pixels on the longest side.",
+    "notAnImage": "That file isn't an image we can read."
+  },
+  "merge": {
+    "title": "Add this browser's clubs?",
+    "description": "{count, plural, one {This browser has a club that isn't in your account yet.} other {This browser has # clubs that aren't in your account yet.}}",
+    "inBrowser": "In this browser",
+    "inAccount": "In your account",
+    "noClubs": "No clubs yet",
+    "unnamedClub": "Unnamed club",
+    "useAccount": "Use only my account",
+    "add": "Add to my account",
+    "goBack": "Go back",
+    "remove": "Remove from this browser",
+    "warning": "{count, plural, one {That club is removed from this browser and isn't saved anywhere. Download a backup from the team menu first if you might want it.} other {Those clubs are removed from this browser and aren't saved anywhere. Download a backup from the team menu first if you might want them.}}"
+  }
+}

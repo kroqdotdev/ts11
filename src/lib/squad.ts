@@ -2,7 +2,7 @@ import { FORMATIONS, formationSlots } from "./formation";
 import type { Lineup, Player, Position, TeamSize } from "./types";
 
 export interface ParsedPlayer extends Omit<Player, "id"> {
-  /** Marked "(c)" or "capt" in the paste. */
+  /** Marked "(c)", "capt", "(A)" or "anfører" in the paste. */
   captain: boolean;
   /** The position was written in the paste, rather than defaulted. */
   positioned: boolean;
@@ -12,6 +12,10 @@ export interface ParsedPlayer extends Omit<Player, "id"> {
 
 export type Section = "starters" | "bench";
 
+/** Why a line was not read as a player, for the interface to put in words. */
+export type IgnoreCode =
+  "noName" | "message" | "time" | "tooLong" | "notPlayer" | "benchHeading" | "startersHeading";
+
 /** A pasted line that was not read as a player, shown so it can be put back. */
 export interface IgnoredLine {
   /** Line number in the pasted text, starting at 0. */
@@ -19,7 +23,9 @@ export interface IgnoredLine {
   /** The line as pasted; pass it back to `readSquad` in `restore` to read it as a player. */
   key: string;
   text: string;
+  /** The reason in English; `code` says the same for translating. */
   reason: string;
+  code: IgnoreCode;
   /** False when there is nothing name-like to put back (an emoji, a heading). */
   restorable: boolean;
 }
@@ -29,17 +35,47 @@ export interface SquadRead {
   ignored: IgnoredLine[];
 }
 
-/** Every way a position tends to be written in a group chat. Longest first within a role. */
+/**
+ * Every way a position tends to be written in a group chat, in English and Danish
+ * (målmand/MM, forsvar/FS, midtbane/MB, angreb/AN, and the backs and wings).
+ */
 const POSITION_WORDS: [Position, string[]][] = [
-  ["GK", ["goalkeeper", "goalie", "keeper", "gk", "g/k"]],
+  ["GK", ["goalkeeper", "goalie", "keeper", "gk", "g/k", "målmand", "målmanden", "mm"]],
   [
     "DF",
-    ["defender", "defence", "defense", "def", "df", "cb", "lb", "rb", "lwb", "rwb", "fb", "wb"],
+    [
+      ...[
+        "defender",
+        "defence",
+        "defense",
+        "def",
+        "df",
+        "cb",
+        "lb",
+        "rb",
+        "lwb",
+        "rwb",
+        "fb",
+        "wb",
+      ],
+      ...["forsvar", "forsvarer", "forsvarsspiller", "midterforsvarer", "stopper", "back"],
+      ...["venstreback", "højreback", "fs", "vb", "hb"],
+    ],
   ],
-  ["MF", ["midfielder", "midfield", "mid", "mf", "cm", "cdm", "cam", "dm", "am", "lm", "rm"]],
+  [
+    "MF",
+    [
+      ...["midfielder", "midfield", "mid", "mf", "cm", "cdm", "cam", "dm", "am", "lm", "rm"],
+      ...["midtbane", "midtbanespiller", "midbane", "central midtbane", "mb", "cmb"],
+    ],
+  ],
   [
     "FW",
-    ["forward", "striker", "winger", "attacker", "att", "fw", "fwd", "st", "cf", "lw", "rw", "ss"],
+    [
+      ...["forward", "striker", "winger", "attacker", "att", "fw", "fwd", "st", "cf", "lw", "rw"],
+      ...["ss", "angreb", "angriber", "angribere", "kant", "kantspiller", "wing", "an", "ang"],
+      ...["vk", "hk"],
+    ],
   ],
 ];
 const POSITION_OF = new Map<string, Position>(
@@ -76,8 +112,10 @@ function findPosition(line: string): { index: number; length: number; position: 
   }
   return null;
 }
-const CAPTAIN_RE = /[([]\s*(?:c|capt|captain)\s*[)\]]|(?:^|\s)(?:capt|captain)\.?(?=\s|$)/i;
-const VICE_RE = /[([]\s*(?:vc|vice)\s*[)\]]/gi;
+// "(C)", "capt" and Danish "(A)" or "anfører" (also "(anf.)" and "kaptajn").
+const CAPTAIN_RE =
+  /[([]\s*(?:c|capt|captain|a|anf\.?|anfører|k|kapt\.?|kaptajn)\s*[)\]]|(?:^|\s)(?:capt|captain|anfører|kaptajn)\.?(?=\s|$)/iu;
+const VICE_RE = /[([]\s*(?:vc|vice|va|vice-?anfører|viceanfører)\s*[)\]]/giu;
 // Emoji and other pictographs that come with chat pastes.
 const EMOJI_RE = /[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{20E3}]/gu;
 
@@ -93,6 +131,16 @@ function cleanName(raw: string): string {
       .replace(/\s+/g, " ")
       .trim()
   );
+}
+
+/** The position a group heading stands for ("Forsvar", "Midfielders", "Mål"). */
+function groupPosition(word: string): Position | null {
+  const w = word.toLowerCase();
+  if (/^(goal|mål|målm|keeper|gk)/.test(w)) return "GK";
+  if (/^(defen|forsvar)/.test(w)) return "DF";
+  if (/^(mid)/.test(w)) return "MF";
+  if (/^(attack|forward|striker|angr)/.test(w)) return "FW";
+  return null;
 }
 
 /** Parses one pasted line, or null when nothing name-like is left. */
@@ -151,9 +199,17 @@ const SYSTEM_RE =
   /<media omitted>|\b(?:image|video|audio|sticker|gif|document) omitted\b|this message was deleted|messages and calls are end-to-end encrypted|\bcreated group\b|\badded\b.*\bto the group\b|\bleft$/i;
 const URL_RE = /https?:\/\/|www\.|\.(?:com|co\.uk|org|net)\b/i;
 const BENCH_HEADING_RE =
-  /^(?:subs|substitutes|bench|reserves|on the bench|sub(?:stitute)?s? bench)\s*(?::|-|–)?\s*/i;
+  /^(?:subs|substitutes|bench|reserves|on the bench|sub(?:stitute)?s? bench|udskiftere|udskiftningsspillere|bænk(?:en)?|på bænken|reserver)(?![\p{L}\p{N}])\s*(?::|-|–)?\s*/iu;
 const STARTERS_HEADING_RE =
-  /^(?:starting\s*(?:xi|11|eleven|line-?up|team)?|line-?up|team(?:\s+sheet)?|first\s*(?:xi|11|team)|starters|xi)\b\s*(?::|-|–)?\s*/i;
+  /^(?:starting\s*(?:xi|11|eleven|line-?up|team)?|line-?up|team(?:\s+sheet)?|first\s*(?:xi|11|team)|starters|xi|startopstilling(?:en)?|startellever(?:en)?|start(?:\s*|-)11(?:'?eren)?|dagens\s+(?:hold|startopstilling)|kampens\s+hold|holdet|holdopstilling(?:en)?)(?![\p{L}\p{N}])\s*(?::|-|–)?\s*/iu;
+/**
+ * A position group with its players: "Defence: Okafor, Carr, Desai" or Danish
+ * "Forsvar: Bech, Holm og Dahl". "Mål:" on its own is the keeper line of a Danish post.
+ */
+const POSITION_HEADING_RE =
+  /^(goalkeepers?|keepers?|goal|gk|defen[cs]e|defenders|midfield(?:ers)?|attack|forwards|strikers|målm[ae]nd|mål|keeper|forsvar(?:et|sspillere)?|midtbane(?:n|spillere)?|angreb(?:et)?|angribere)\s*[:–-]\s*(.+)$/iu;
+/** Splits a list of names: commas, semicolons, slashes and a final "og" / "and" / "&". */
+const LIST_SPLIT_RE = /\s*[,;/]\s*|\s+(?:og|and|&)\s+/iu;
 /** Small words that turn up in chat but never in a name (when written in lowercase). */
 const CHAT_WORDS = new Set(
   (
@@ -161,22 +217,37 @@ const CHAT_WORDS = new Set(
     "does don't for from get got going good guys have here hey hi how i i'm if in is it it's " +
     "kick know lads let let's meet morning need no not of off on or our please pls see so " +
     "thanks that the there this tomorrow tonight today to training up us was we we're well " +
-    "what when where who will with yes you your"
+    "what when where who will with yes you your " +
+    // Danish
+    "af alle at bare da de dem den der det du efter en er et for fra før godt har hej " +
+    "hilsen hvad hvem hvis hvor husk i ikke jeg jer jo kan kl kommer lige med mig mødes " +
+    "når nu og også om os på så se ses skal som tak til ved vi være"
   ).split(" "),
 );
 
+/** The English wording of each reason; the interface translates by `code`. */
+const REASONS: Record<IgnoreCode, string> = {
+  noName: "No name in it",
+  message: "Reads like a message",
+  time: "Has a time in it",
+  tooLong: "Too long for a name",
+  notPlayer: "Not a player",
+  benchHeading: "Heading: the bench follows",
+  startersHeading: "Heading: the starters follow",
+};
+
 /** Why a line reads as chat rather than a player, or null if it could be a player. */
-function chatReason(text: string, read: LineRead): string | null {
-  if (/[?!]\s*$/.test(text) && read.words.length > 1) return "Reads like a message";
-  if (/\b\d{1,2}[:.]\d{2}\b|\b\d{1,2}\s?(?:am|pm)\b/i.test(text)) return "Has a time in it";
-  if (read.words.length > 5) return "Too long for a name";
+function chatReason(text: string, read: LineRead): IgnoreCode | null {
+  if (/[?!]\s*$/.test(text) && read.words.length > 1) return "message";
+  if (/\b\d{1,2}[:.]\d{2}\b|\b\d{1,2}\s?(?:am|pm)\b/i.test(text)) return "time";
+  if (read.words.length > 5) return "tooLong";
   // Lowercase small words: one is enough in a longer line, two in a short one
   // ("will smith" typed in lowercase is still a name; "see you" is not).
   const lower = read.words.filter((w) => CHAT_WORDS.has(w.toLowerCase()) && w === w.toLowerCase());
-  if (lower.length >= (read.words.length >= 3 ? 1 : 2)) return "Reads like a message";
+  if (lower.length >= (read.words.length >= 3 ? 1 : 2)) return "message";
   // A lowercase first word followed by more words ("see you all") is a sentence.
   if (read.words.length > 2 && read.words.every((w) => w === w.toLowerCase())) {
-    return "Reads like a message";
+    return "message";
   }
   return null;
 }
@@ -197,12 +268,26 @@ export function readSquad(text: string, restore: ReadonlySet<string> = new Set()
     const read = readLine(raw);
     if (!read) {
       if (raw.trim())
-        ignored.push({ line, key, text: raw.trim(), reason: "No name in it", restorable: false });
+        ignored.push({
+          line,
+          key,
+          text: raw.trim(),
+          reason: REASONS.noName,
+          code: "noName",
+          restorable: false,
+        });
       return;
     }
     const why = force ? null : chatReason(raw, read);
     if (why) {
-      ignored.push({ line, key, text: raw.trim(), reason: why, restorable: true });
+      ignored.push({
+        line,
+        key,
+        text: raw.trim(),
+        reason: REASONS[why],
+        code: why,
+        restorable: true,
+      });
       return;
     }
     const { words: _words, ...player } = read;
@@ -219,15 +304,41 @@ export function readSquad(text: string, restore: ReadonlySet<string> = new Set()
           line,
           key,
           text: raw.trim() || original.trim(),
-          reason: "No name in it",
+          reason: REASONS.noName,
+          code: "noName",
           restorable: false,
         });
       return;
     }
     if (restore.has(key)) return add(raw, line, true);
     if (SYSTEM_RE.test(plain) || URL_RE.test(plain)) {
-      ignored.push({ line, key, text: raw.trim(), reason: "Not a player", restorable: true });
+      ignored.push({
+        line,
+        key,
+        text: raw.trim(),
+        reason: REASONS.notPlayer,
+        code: "notPlayer",
+        restorable: true,
+      });
       return;
+    }
+
+    // "Defence: Okafor, Carr" / "Forsvar: Bech, Holm og Dahl": a position group.
+    // Its players start, unless the paste has already reached the bench.
+    const group = POSITION_HEADING_RE.exec(plain);
+    if (group && section !== "bench") {
+      const position = POSITION_OF.get(group[1].toLowerCase()) ?? groupPosition(group[1]);
+      const names = group[2].split(LIST_SPLIT_RE).filter((n) => n.trim());
+      if (position && names.length) {
+        for (const name of names) {
+          const before = players.length;
+          add(name, line, true);
+          const p = players[before];
+          if (p && !p.positioned) players[before] = { ...p, position, positioned: true };
+          if (p && section === null) players[before] = { ...players[before], section: "starters" };
+        }
+        return;
+      }
     }
 
     // "Subs:" and "Starting XI" headings switch the section. Names after them on the
@@ -239,18 +350,24 @@ export function readSquad(text: string, restore: ReadonlySet<string> = new Set()
       const rest = plain.slice(heading[0].length).trim();
       const listed = /[,;/]/.test(rest);
       // "Team for Saturday" and "Team news" are headings; "Team Smith" would not be.
-      const isHeading = !!bench || !rest || listed || /^(?:for|v|vs|against)\b|^\p{Ll}/u.test(rest);
+      // Danish too: "Holdet mod Kildeby", "Dagens hold til lørdag".
+      const isHeading =
+        !!bench ||
+        !rest ||
+        listed ||
+        /^(?:for|v|vs|against|mod|imod|til|på|i)(?![\p{L}\p{N}])|^\p{Ll}/u.test(rest);
       if (isHeading) {
         section = bench ? "bench" : "starters";
         ignored.push({
           line,
           key,
           text: raw.trim(),
-          reason: bench ? "Heading: the bench follows" : "Heading: the starters follow",
+          reason: REASONS[bench ? "benchHeading" : "startersHeading"],
+          code: bench ? "benchHeading" : "startersHeading",
           restorable: !listed && !!rest,
         });
         if (rest && (listed || bench)) {
-          for (const name of rest.split(/\s*[,;/]\s*/)) if (name.trim()) add(name, line, true);
+          for (const name of rest.split(LIST_SPLIT_RE)) if (name.trim()) add(name, line, true);
         }
         return;
       }
@@ -279,7 +396,11 @@ export function parseSquad(text: string, restore?: ReadonlySet<string>): ParsedP
 export interface SquadWarning {
   /** Index in the parsed list. */
   index: number;
+  /** In English; translate by `code` with `other` (the earlier line, 1-based) or `number`. */
   message: string;
+  code: "sameName" | "sameNumber";
+  other?: number;
+  number?: string;
 }
 
 /** Same name or same number twice: shown beside the preview, not blocked. */
@@ -291,12 +412,22 @@ export function squadWarnings(players: Pick<Player, "name" | "number">[]): Squad
     const key = p.name.trim().toLowerCase();
     const firstName = names.get(key);
     if (key && firstName !== undefined)
-      warnings.push({ index: i, message: `Same name as no. ${firstName + 1} in the list` });
+      warnings.push({
+        index: i,
+        message: `Same name as no. ${firstName + 1} in the list`,
+        code: "sameName",
+        other: firstName + 1,
+      });
     else if (key) names.set(key, i);
     if (p.number) {
       const firstNum = numbers.get(p.number);
       if (firstNum !== undefined)
-        warnings.push({ index: i, message: `Shirt ${p.number} is taken twice` });
+        warnings.push({
+          index: i,
+          message: `Shirt ${p.number} is taken twice`,
+          code: "sameNumber",
+          number: p.number,
+        });
       else numbers.set(p.number, i);
     }
   });

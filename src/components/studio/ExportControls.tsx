@@ -10,16 +10,17 @@ import {
   SpinnerGapIcon,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { FORMATS } from "@/components/graphics/theme";
 import { Button, Dialog, MenuButton } from "@/components/ui/controls";
-import { downloadBlob, graphicFilename, renderGraphicPng } from "@/lib/export";
+import { downloadBlob, ExportError, graphicFilename, renderGraphicPng } from "@/lib/export";
 import { postIssues, type Issue } from "@/lib/issues";
-import { KIND_LABEL } from "@/lib/kinds";
 import { useActiveTeam, useStudio } from "@/lib/store";
-import type { FormatId } from "@/lib/types";
+import type { FormatId, GraphicKind } from "@/lib/types";
 import { fixIssue } from "./fixIssue";
+import { issueKey, useFileWords, useIssueText } from "./words";
 
 type Action = "download" | "download2x" | "copy" | "share";
 
@@ -28,11 +29,20 @@ export function ExportControls({ compact = false }: { compact?: boolean }) {
   const design = useStudio((s) => s.design);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Action | null>(null);
+  const t = useTranslations("studio.export");
+  const format = useFormatter();
+  const naming = useFileWords();
+  const issueText = useIssueText();
   const issues = postIssues(team, design);
   // Only soft checks left: the graphic is complete, something just doesn't add up.
   const onlyChecks = issues.length > 0 && issues.every((i) => i.soft);
 
-  const filename = graphicFilename(team, design);
+  const filename = graphicFilename(team, naming.graphic(design.kind, design.format), naming.words);
+  const kindList = (kinds: GraphicKind[]) =>
+    format.list(kinds.map(naming.kindLabel), { type: "conjunction" });
+  /** The words for a failed export: ours when we know why, else a general hint. */
+  const why = (err: unknown, fallback: string) =>
+    err instanceof ExportError ? t(err.code) : fallback;
   const canShare =
     typeof navigator !== "undefined" &&
     typeof navigator.canShare === "function" &&
@@ -49,17 +59,19 @@ export function ExportControls({ compact = false }: { compact?: boolean }) {
   async function shareAll() {
     if (busy) return;
     setBusy(true);
-    const id = toast.loading("Drawing your graphics", { description: "Starting…" });
+    const id = toast.loading(t("drawing"), { description: t("starting") });
     try {
       const { renderAll } = await import("./batchExport");
-      const { files, skipped } = await renderAll(team, design, [design.format], (done, total) =>
-        toast.loading("Drawing your graphics", { id, description: `${done} of ${total}` }),
+      const { files, skipped } = await renderAll(
+        team,
+        design,
+        [design.format],
+        (done, total) =>
+          toast.loading(t("drawing"), { id, description: t("progress", { done, total }) }),
+        naming,
       );
       if (files.length === 0) {
-        toast.error("Nothing to share yet", {
-          id,
-          description: "Every graphic is still missing details. Check “Before you post”.",
-        });
+        toast.error(t("nothingToShare"), { id, description: t("allMissing") });
         return;
       }
       const list = files.map((f) => new File([f.blob], f.name, { type: "image/png" }));
@@ -72,21 +84,17 @@ export function ExportControls({ compact = false }: { compact?: boolean }) {
         if (e instanceof DOMException && e.name === "AbortError") return;
         // Drawing took long enough that the tap no longer counts: ask for one more.
         if (e instanceof DOMException && e.name === "NotAllowedError") {
-          toast.success(`${list.length} graphics ready`, {
+          toast.success(t("ready", { count: list.length }), {
             duration: 20_000,
-            action: { label: "Share", onClick: () => void navigator.share({ files: list }) },
+            action: { label: t("share"), onClick: () => void navigator.share({ files: list }) },
           });
           return;
         }
         throw e;
       });
-      if (skipped.length)
-        toast.message(`Left out until finished: ${skipped.map((k) => KIND_LABEL[k]).join(", ")}`);
+      if (skipped.length) toast.message(t("leftOut", { list: kindList(skipped) }));
     } catch (err) {
-      toast.error("Sharing failed", {
-        id,
-        description: err instanceof Error ? err.message : "Try “Download all” instead.",
-      });
+      toast.error(t("shareFailed"), { id, description: why(err, t("tryDownloadAll")) });
     } finally {
       setBusy(false);
     }
@@ -96,33 +104,32 @@ export function ExportControls({ compact = false }: { compact?: boolean }) {
   async function runAll(formats: FormatId[]) {
     if (busy) return;
     setBusy(true);
-    const id = toast.loading("Drawing your graphics", { description: "Starting…" });
+    const id = toast.loading(t("drawing"), { description: t("starting") });
     try {
       // Loaded on demand: the zip code is only needed here.
       const { exportAll } = await import("./batchExport");
-      const result = await exportAll(team, design, formats, (done, total) =>
-        toast.loading("Drawing your graphics", { id, description: `${done} of ${total}` }),
+      const result = await exportAll(
+        team,
+        design,
+        formats,
+        (done, total) =>
+          toast.loading(t("drawing"), { id, description: t("progress", { done, total }) }),
+        naming,
+        issueText,
       );
       if (result.count === 0) {
-        toast.error("Nothing to download yet", {
-          id,
-          description: "Every graphic is still missing details. Check “Before you post”.",
-        });
+        toast.error(t("nothingToDownload"), { id, description: t("allMissing") });
         return;
       }
       downloadBlob(result.zip, result.filename);
-      const left = result.skipped.map((k) => KIND_LABEL[k]).join(", ");
-      toast.success(`${result.count} PNGs downloaded`, {
+      toast.success(t("downloaded", { count: result.count }), {
         id,
         description: result.skipped.length
-          ? `In ${result.filename}. Left out until finished: ${left}.`
-          : `In ${result.filename}.`,
+          ? t("inFileLeftOut", { file: result.filename, list: kindList(result.skipped) })
+          : t("inFile", { file: result.filename }),
       });
     } catch (err) {
-      toast.error("Export failed", {
-        id,
-        description: err instanceof Error ? err.message : "Try again, or use a smaller photo.",
-      });
+      toast.error(t("failedAll"), { id, description: why(err, t("tryAgain")) });
     } finally {
       setBusy(false);
     }
@@ -137,7 +144,7 @@ export function ExportControls({ compact = false }: { compact?: boolean }) {
         await navigator.clipboard.write([
           new ClipboardItem({ "image/png": renderGraphicPng(design.font) }),
         ]);
-        toast.success("Image copied", { description: "Paste it straight into your post." });
+        toast.success(t("copied"), { description: t("pasteIt") });
         return;
       }
       const blob = await renderGraphicPng(design.font, action === "download2x" ? 2 : 1);
@@ -153,11 +160,15 @@ export function ExportControls({ compact = false }: { compact?: boolean }) {
       downloadBlob(blob, filename);
       const f = FORMATS[design.format];
       const k = action === "download2x" ? 2 : 1;
-      toast.success("PNG downloaded", { description: `${f.w * k} × ${f.h * k} px, ${filename}` });
-    } catch (err) {
-      toast.error("Export failed", {
-        description: err instanceof Error ? err.message : "Try again, or use a smaller photo.",
+      toast.success(t("pngDone"), {
+        description: t("pngDetail", {
+          w: format.number(f.w * k),
+          h: format.number(f.h * k),
+          file: filename,
+        }),
       });
+    } catch (err) {
+      toast.error(t("failed"), { description: why(err, t("tryAgain")) });
     } finally {
       setBusy(false);
     }
@@ -184,50 +195,50 @@ export function ExportControls({ compact = false }: { compact?: boolean }) {
           ) : (
             <DownloadSimpleIcon size={18} weight="bold" />
           )}
-          {compact ? (canShare ? "Share" : "Save") : "Download PNG"}
+          {compact ? (canShare ? t("share") : t("save")) : t("downloadPng")}
         </Button>
         <MenuButton
-          label="More export options"
+          label={t("more")}
           triggerClassName="inline-flex h-10 items-center rounded-r-[4px] border-2 border-card-ink bg-card px-2 text-card-ink hover:brightness-[1.04]"
           trigger={<CaretDownIcon size={14} weight="bold" />}
           items={[
             {
-              label: "Download PNG",
+              label: t("downloadPng"),
               icon: <DownloadSimpleIcon size={16} />,
               onSelect: () => request("download"),
               hidden: !(canShare && compact),
             },
             {
-              label: "Download at double size",
+              label: t("double"),
               icon: <DownloadSimpleIcon size={16} />,
               onSelect: () => request("download2x"),
             },
             {
-              label: "Copy image",
+              label: t("copy"),
               icon: <CopyIcon size={16} />,
               onSelect: () => request("copy"),
               hidden: !canCopy,
             },
             {
-              label: "Share",
+              label: t("share"),
               icon: <ShareNetworkIcon size={16} />,
               onSelect: () => request("share"),
               hidden: !canShare || compact,
             },
             "separator",
             {
-              label: `Share all graphics (${FORMATS[design.format].label})`,
+              label: t("shareAll", { format: naming.formatLabel(design.format) }),
               icon: <ShareNetworkIcon size={16} />,
               onSelect: () => void shareAll(),
               hidden: !canShare,
             },
             {
-              label: `Download all graphics (${FORMATS[design.format].label})`,
+              label: t("downloadAll", { format: naming.formatLabel(design.format) }),
               icon: <FilesIcon size={16} />,
               onSelect: () => void runAll([design.format]),
             },
             {
-              label: "Download all graphics, every size",
+              label: t("downloadEvery"),
               icon: <FilesIcon size={16} />,
               onSelect: () => void runAll(Object.keys(FORMATS) as FormatId[]),
             },
@@ -236,12 +247,8 @@ export function ExportControls({ compact = false }: { compact?: boolean }) {
         <Dialog
           open={pending !== null}
           onOpenChange={(o) => !o && setPending(null)}
-          title={onlyChecks ? "Worth a check before you post" : "This graphic isn't finished"}
-          description={
-            onlyChecks
-              ? "Something in the match details doesn't add up:"
-              : "The preview fills gaps with sample content, but the PNG only uses your own details, so these parts will be missing:"
-          }
+          title={onlyChecks ? t("checkTitle") : t("unfinishedTitle")}
+          description={onlyChecks ? t("checkBody") : t("unfinishedBody")}
           footer={
             <>
               <Button
@@ -252,7 +259,7 @@ export function ExportControls({ compact = false }: { compact?: boolean }) {
                   if (action) void run(action);
                 }}
               >
-                Export anyway
+                {t("anyway")}
               </Button>
               <Button
                 variant="primary"
@@ -263,19 +270,19 @@ export function ExportControls({ compact = false }: { compact?: boolean }) {
                   window.setTimeout(() => fixIssue(first), 60);
                 }}
               >
-                Fix it
+                {t("fixIt")}
               </Button>
             </>
           }
         >
           <ul className="flex flex-col gap-1.5 text-sm">
-            {issues.map((i) => (
-              <li key={i.message} className="flex items-center gap-2.5">
+            {issues.map((i, n) => (
+              <li key={issueKey(i, n)} className="flex items-center gap-2.5">
                 <span
                   aria-hidden
                   className={clsx("size-2 shrink-0", i.soft ? "bg-card" : "bg-danger")}
                 />
-                {i.message}
+                {issueText(i)}
               </li>
             ))}
           </ul>
@@ -288,12 +295,14 @@ export function ExportControls({ compact = false }: { compact?: boolean }) {
 /** A red-card count beside the export button; tap for the list and a jump to each fix. */
 function IssuesBadge({ issues }: { issues: Issue[] }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations("studio.export");
+  const issueText = useIssueText();
   const n = issues.length;
   const soft = issues.every((i) => i.soft);
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
-        aria-label={`${n} ${n === 1 ? "thing" : "things"} to ${soft ? "check" : "fix"} before you post`}
+        aria-label={soft ? t("badgeCheck", { count: n }) : t("badgeFix", { count: n })}
         className={clsx(
           "relative grid h-10 min-w-10 lofi-press place-items-center rounded-[3px] border-2 border-card-ink px-2 font-signage text-[22px] leading-none shadow-[3px_3px_0_var(--card-ink)]",
           // A red card for missing details, a yellow one for things that don't add up.
@@ -307,11 +316,11 @@ function IssuesBadge({ issues }: { issues: Issue[] }) {
           <Popover.Popup className="w-[min(20rem,calc(100vw-1.5rem))] origin-(--transform-origin) rounded-[4px] border-2 border-edge bg-paper text-ink shadow-[5px_5px_0_var(--edge)] transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
             <Popover.Title className="flex items-center gap-2 border-b-2 border-edge bg-grass-deep px-3 py-2 font-signage text-[20px] leading-none text-chalk">
               <span aria-hidden className={clsx("size-2.5", soft ? "bg-card" : "bg-danger")} />
-              Before you post
+              {t("beforePost")}
             </Popover.Title>
             <ul className="flex flex-col p-1.5">
-              {issues.map((issue) => (
-                <li key={issue.message}>
+              {issues.map((issue, i) => (
+                <li key={issueKey(issue, i)}>
                   <button
                     type="button"
                     onClick={() => {
@@ -325,10 +334,10 @@ function IssuesBadge({ issues }: { issues: Issue[] }) {
                         aria-hidden
                         className={clsx("size-2 shrink-0", issue.soft ? "bg-card" : "bg-danger")}
                       />
-                      {issue.message}
+                      {issueText(issue)}
                     </span>
                     <span className="shrink-0 rounded-[3px] border-2 border-card-ink bg-card px-2 py-0.5 text-[12px] font-semibold text-card-ink">
-                      {issue.soft ? "Check" : "Fix"}
+                      {issue.soft ? t("check") : t("fix")}
                     </span>
                   </button>
                 </li>

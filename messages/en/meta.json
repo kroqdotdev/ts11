@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "{app}: free match day graphics for your club",
+    "description": "Make starting XI, team news, matchday and full-time graphics for your club in minutes. Free, no sign-up needed, no watermark."
+  },
+  "studio": {
+    "title": "Studio",
+    "description": "Build your starting XI, team news, matchday and full-time graphics."
+  },
+  "account": {
+    "title": "Storage and account",
+    "description": "Your saved clubs, uploaded images and account settings."
+  },
+  "resetPassword": {
+    "title": "Choose a new password",
+    "description": "Set a new password for your {app} account."
+  },
+  "privacy": {
+    "title": "Privacy",
+    "description": "What {app} keeps, where it is kept and for how long, with or without an account."
+  }
+}

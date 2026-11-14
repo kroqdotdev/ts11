@@ -1,11 +1,12 @@
 import { scorerLabel } from "@/lib/score";
+import { textFor } from "@/lib/graphicText";
 import type { Design, Goal, NameStyle, Team } from "@/lib/types";
 import { columnBox, fitNames, sides, TeamRow, teamRowNameWidth, type Side } from "./Fixture";
 import { fitText, Footer, Heading, MatchMeta, minPx, px, textUnits } from "./parts";
 import type { Theme } from "./theme";
 
 function label(team: Team, g: Goal, style: NameStyle): string {
-  const name = scorerLabel(team, g, style) || "Goal";
+  const name = scorerLabel(team, g, style) || textFor(team).goal;
   return g.minute ? `${name} ${g.minute}′` : name;
 }
 
@@ -69,7 +70,7 @@ function Scorers({
     >
       {side.goals.map((g) => (
         <span key={g.id} style={{ whiteSpace: fitted.wrap ? "normal" : "nowrap" }}>
-          {scorerLabel(team, g, fitted.style) || "Goal"}
+          {scorerLabel(team, g, fitted.style) || textFor(team).goal}
           {g.minute && (
             <span style={{ textTransform: "none", whiteSpace: "nowrap" }}> {g.minute}&prime;</span>
           )}

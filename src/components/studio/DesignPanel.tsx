@@ -3,8 +3,10 @@
 import { initials } from "@/lib/format";
 import { CheckIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { DEFAULT_HEADLINES } from "@/lib/demo";
-import { KIND_LABEL, KINDS } from "@/lib/kinds";
+import { useFormatter, useTranslations } from "next-intl";
+import { effectiveHeadline, graphicText } from "@/lib/graphicText";
+import { KINDS } from "@/lib/kinds";
+import { graphicsLanguage } from "@/lib/language";
 import { alpha, tonal } from "@/lib/color";
 import { GRAPHIC_FONTS } from "@/lib/fonts";
 import { useActiveTeam, useStudio } from "@/lib/store";
@@ -32,16 +34,17 @@ function ScopePicker({
   onChange: (value: GraphicKind[] | null) => void;
   current: GraphicKind;
 }) {
+  const t = useTranslations("studio");
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-[13px] font-medium">Use it on</span>
+      <span className="text-[13px] font-medium">{t("design.useOn")}</span>
       <Segmented
-        label="Use it on"
+        label={t("design.useOn")}
         value={value ? "some" : "all"}
         onChange={(v) => onChange(v === "all" ? null : [current])}
         options={[
-          { value: "all", label: "Every graphic" },
-          { value: "some", label: "Only some" },
+          { value: "all", label: t("design.every") },
+          { value: "some", label: t("design.some") },
         ]}
       />
       {value && (
@@ -61,7 +64,7 @@ function ScopePicker({
                     : "border-rule text-ink-soft hover:border-ink",
                 )}
               >
-                {k.label}
+                {t(`kinds.${k.id}.label`)}
               </button>
             );
           })}
@@ -75,11 +78,12 @@ function LookPicker() {
   const team = useActiveTeam();
   const design = useStudio((s) => s.design);
   const updateDesign = useStudio((s) => s.updateDesign);
+  const tr = useTranslations("studio");
 
   return (
     <div
       role="radiogroup"
-      aria-label="Style"
+      aria-label={tr("design.style")}
       className="grid grid-cols-2 gap-2"
       onKeyDown={radioGroupKeys}
     >
@@ -148,17 +152,17 @@ function LookPicker() {
             </span>
             <span className="px-1 pb-0.5">
               <span className="flex items-center gap-1.5 text-sm font-semibold">
-                {LOOKS[look].label}
+                {tr(`looks.${look}.label`)}
                 {active && (
                   <span className="rounded-[2px] bg-card-ink px-1 py-px font-signage text-[13px] leading-none font-normal text-card">
-                    In use
+                    {tr("design.inUse")}
                   </span>
                 )}
               </span>
               <span
                 className={clsx("block text-xs", active ? "text-card-ink/80" : "text-ink-soft")}
               >
-                {LOOKS[look].hint}
+                {tr(`looks.${look}.hint`)}
               </span>
             </span>
           </button>
@@ -171,10 +175,11 @@ function LookPicker() {
 function FontPicker() {
   const font = useStudio((s) => s.design.font);
   const updateDesign = useStudio((s) => s.updateDesign);
+  const t = useTranslations("studio.design");
   return (
     <div
       role="radiogroup"
-      aria-label="Typeface"
+      aria-label={t("typeface")}
       className="grid grid-cols-2 gap-2"
       onKeyDown={radioGroupKeys}
     >
@@ -197,7 +202,7 @@ function FontPicker() {
               className="text-[22px] leading-none uppercase"
               style={{ fontFamily: f.family, fontWeight: f.heavy, fontStretch: f.stretch }}
             >
-              Kick-off
+              {t("fontSample")}
             </span>
             <span className="text-[11px] text-ink-soft">{f.label}</span>
           </button>
@@ -216,30 +221,34 @@ export function DesignPanel() {
   const colors = design.colors ?? team.colors;
   const bg = design.background;
   const isLineup = design.kind === "lineup" || design.kind === "pitch";
+  const t = useTranslations("studio.design");
+  const tk = useTranslations("studio.kinds");
+  const number = useFormatter().number;
+  const lang = graphicsLanguage(team);
 
   return (
     <>
-      <Section title="Style">
+      <Section title={t("style")}>
         <LookPicker />
         <FontPicker />
       </Section>
 
-      <Section title="Colours">
+      <Section title={t("colours")}>
         <SwitchRow
-          label="Use club colours"
-          hint="Turn off to use different colours on this graphic only."
+          label={t("useClub")}
+          hint={t("useClubHint")}
           checked={design.colors === null}
           onChange={(on) => updateDesign({ colors: on ? null : { ...team.colors } })}
         />
         {design.colors && (
           <div className="grid grid-cols-2 gap-3">
             <ColorField
-              label="Main colour"
+              label={t("main")}
               value={colors.primary}
               onChange={(primary) => updateDesign({ colors: { ...colors, primary } })}
             />
             <ColorField
-              label="Accent"
+              label={t("accent")}
               value={colors.secondary}
               onChange={(secondary) => updateDesign({ colors: { ...colors, secondary } })}
             />
@@ -247,25 +256,26 @@ export function DesignPanel() {
         )}
       </Section>
 
-      <Section title="Text">
+      <Section title={t("text")}>
         <TextField
-          label={`${KIND_LABEL[design.kind]} headline`}
-          value={design.headlines[design.kind]}
-          placeholder={DEFAULT_HEADLINES[design.kind]}
+          label={t("headline", { kind: tk(`${design.kind}.label`) })}
+          // What prints: a headline still on a default follows the club's graphics language.
+          value={effectiveHeadline(design, design.kind, lang)}
+          placeholder={graphicText(lang).headlines[design.kind]}
           onChange={(text) => setHeadline(design.kind, text)}
         />
         <TextField
-          label="Footer"
-          hint="A hashtag, website or sponsor line."
+          label={t("footer")}
+          hint={t("footerHint")}
           value={design.footer}
           onChange={(footer) => updateDesign({ footer })}
         />
       </Section>
 
-      <Section title="Background photo">
+      <Section title={t("background")}>
         <ImageField
-          label="Photo"
-          hint="A player, the ground or the crowd. It fills the whole graphic, and the text sits on top."
+          label={t("photo")}
+          hint={t("photoHint")}
           value={bg.image}
           purpose="photo"
           preview="cover"
@@ -278,66 +288,60 @@ export function DesignPanel() {
               onChange={(backgroundOn) => updateDesign({ backgroundOn })}
             />
             <div className="flex flex-col gap-1.5">
-              <span className="text-[13px] font-medium">Overlay</span>
+              <span className="text-[13px] font-medium">{t("overlay")}</span>
               <Segmented<PhotoOverlay>
-                label="Overlay"
+                label={t("overlay")}
                 value={bg.overlay}
                 onChange={(overlay) => updateBackground({ overlay })}
                 options={[
-                  {
-                    value: "fade",
-                    label: "Fade",
-                    title: "Club colour fading in from the text side",
-                  },
-                  { value: "tint", label: "Tint", title: "Even club-colour wash" },
-                  {
-                    value: "duotone",
-                    label: "Duotone",
-                    title: "Photo printed in your club colour",
-                  },
-                  { value: "none", label: "None" },
+                  { value: "fade", label: t("fade"), title: t("fadeTitle") },
+                  { value: "tint", label: t("tint"), title: t("tintTitle") },
+                  { value: "duotone", label: t("duotone"), title: t("duotoneTitle") },
+                  { value: "none", label: t("none") },
                 ]}
               />
             </div>
             {bg.overlay !== "none" && (
               <SliderField
-                label="Overlay strength"
+                label={t("strength")}
                 value={bg.strength}
                 onChange={(strength) => updateBackground({ strength })}
               />
             )}
             <SliderField
-              label="Zoom"
+              label={t("zoom")}
               value={bg.zoom}
               min={1}
               max={2.5}
               step={0.05}
-              format={(v) => `${v.toFixed(2)}×`}
+              format={(v) =>
+                `${number(v, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}×`
+              }
               onChange={(zoom) => updateBackground({ zoom })}
             />
             <div className="grid grid-cols-2 gap-4">
               <SliderField
-                label="Left to right"
+                label={t("leftRight")}
                 value={bg.x}
                 min={0}
                 max={100}
                 step={1}
-                format={(v) => `${Math.round(v)}%`}
+                format={(v) => number(Math.round(v) / 100, { style: "percent" })}
                 onChange={(x) => updateBackground({ x })}
               />
               <SliderField
-                label="Top to bottom"
+                label={t("topBottom")}
                 value={bg.y}
                 min={0}
                 max={100}
                 step={1}
-                format={(v) => `${Math.round(v)}%`}
+                format={(v) => number(Math.round(v) / 100, { style: "percent" })}
                 onChange={(y) => updateBackground({ y })}
               />
             </div>
             {bg.overlay !== "duotone" && (
               <SwitchRow
-                label="Black and white"
+                label={t("mono")}
                 checked={bg.mono}
                 onChange={(mono) => updateBackground({ mono })}
               />
@@ -346,10 +350,10 @@ export function DesignPanel() {
         </ImageField>
       </Section>
 
-      <Section title="Images">
+      <Section title={t("images")}>
         <ImageField
-          label="Player cut-out"
-          hint="A PNG with a transparent background works best. It stands on the right-hand side."
+          label={t("cutout")}
+          hint={t("cutoutHint")}
           value={design.featureImage}
           purpose="feature"
           onChange={(featureImage) => updateDesign({ featureImage })}
@@ -363,39 +367,39 @@ export function DesignPanel() {
           </div>
         </ImageField>
         <ImageField
-          label="Sponsor logo"
+          label={t("sponsor")}
           value={design.sponsorImage}
           purpose="sponsor"
           onChange={(sponsorImage) => updateDesign({ sponsorImage })}
         />
       </Section>
 
-      <Section title="Details">
+      <Section title={t("details")}>
         {isLineup && (
           <div className="flex flex-col gap-1.5">
-            <span className="text-[13px] font-medium">Player names</span>
+            <span className="text-[13px] font-medium">{t("names")}</span>
             <Segmented
-              label="Player names"
+              label={t("names")}
               value={design.nameStyle}
               onChange={(nameStyle) => updateDesign({ nameStyle })}
               options={[
-                { value: "initial", label: "C. Price" },
-                { value: "surname", label: "Price" },
-                { value: "full", label: "Callum Price" },
+                { value: "initial", label: t("nameInitial") },
+                { value: "surname", label: t("nameSurname") },
+                { value: "full", label: t("nameFull") },
               ]}
             />
           </div>
         )}
         {design.kind === "pitch" && (
           <div className="flex flex-col gap-1.5">
-            <span className="text-[13px] font-medium">Player markers</span>
+            <span className="text-[13px] font-medium">{t("markers")}</span>
             <Segmented
-              label="Player markers"
+              label={t("markers")}
               value={design.tokenStyle}
               onChange={(tokenStyle) => updateDesign({ tokenStyle })}
               options={[
-                { value: "shirt", label: "Shirts" },
-                { value: "disc", label: "Discs" },
+                { value: "shirt", label: t("shirts") },
+                { value: "disc", label: t("discs") },
               ]}
             />
           </div>
@@ -404,25 +408,25 @@ export function DesignPanel() {
           {isLineup && (
             <>
               <SwitchRow
-                label="Shirt numbers"
+                label={t("numbers")}
                 checked={design.showNumbers}
                 onChange={(showNumbers) => updateDesign({ showNumbers })}
               />
               <SwitchRow
-                label="Substitutes"
+                label={t("subs")}
                 checked={design.showSubs}
                 onChange={(showSubs) => updateDesign({ showSubs })}
               />
               <SwitchRow
-                label="Captain's armband"
+                label={t("captain")}
                 checked={design.showCaptain}
                 onChange={(showCaptain) => updateDesign({ showCaptain })}
               />
             </>
           )}
           <SwitchRow
-            label="Background lettering"
-            hint={`Your short name, ${team.shortName.trim() || initials(team.name)}, in outline`}
+            label={t("lettering")}
+            hint={t("letteringHint", { short: team.shortName.trim() || initials(team.name) })}
             checked={design.showLettering}
             onChange={(showLettering) => updateDesign({ showLettering })}
           />

@@ -1,17 +1,20 @@
+import { useTranslations } from "next-intl";
+
 /** Mirrors the studio layout while saved data loads from this browser. */
 export function StudioSkeleton() {
+  const t = useTranslations("studio");
   const block = "animate-pulse rounded-[4px]";
   return (
     <div
       className="flex min-h-dvh flex-col bg-grass-deep lg:h-dvh lg:overflow-hidden"
       aria-busy="true"
-      aria-label="Loading the studio"
+      aria-label={t("loading")}
     >
       <div className="flex h-16 shrink-0 items-center gap-4 px-4 lg:px-5">
         {/* Real text in both preloaded faces (Jersey for signage, Archivo for the UI), so
             the preloads are used even when the studio takes a moment to arrive. */}
         <span className="font-signage text-[26px] leading-none text-chalk/80">teamsheet</span>
-        <span className="text-[13px] text-chalk/60">Opening the studio…</span>
+        <span className="text-[13px] text-chalk/60">{t("opening")}</span>
         <div className={`hidden h-10 w-52 bg-chalk/10 sm:block ${block}`} />
         <div className={`ml-auto hidden h-10 w-44 bg-card/60 lg:block ${block}`} />
       </div>

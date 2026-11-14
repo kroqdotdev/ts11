@@ -2,9 +2,35 @@
 
 import { useStudio } from "@/lib/store";
 import type { Design, Team } from "@/lib/types";
+import type { SyncProblem } from "./state";
 
-/** An image couldn't be uploaded for a reason the person has to act on. */
-export class UploadBlocked extends Error {}
+/**
+ * An image couldn't be uploaded for a reason the person has to act on. `problem` is
+ * what the studio shows, in the page's language; the message stays the server's.
+ */
+export class UploadBlocked extends Error {
+  constructor(
+    message: string,
+    readonly problem: SyncProblem,
+  ) {
+    super(message);
+  }
+}
+
+/** The server's refusal codes, as the reasons the sync chip can explain. */
+function problemOf(err: { code?: string; max?: number }): SyncProblem | null {
+  switch (err.code) {
+    case "quota":
+      return { reason: "quota" };
+    case "too-large":
+      return { reason: "imageTooLarge", max: err.max };
+    case "too-big-dimensions":
+      return { reason: "imageTooBig", max: err.max };
+    case "not-an-image":
+      return { reason: "notAnImage" };
+  }
+  return null;
+}
 
 const INLINE = /^data:image\//;
 
@@ -65,14 +91,17 @@ export async function uploadImage(
     limit?: number;
     error?: string;
     message?: string;
+    max?: number;
   };
   if (!res.ok || !body.url) {
     const err = new Error(body.message ?? `Upload failed (${res.status})`) as Error & {
       status?: number;
       code?: string;
+      max?: number;
     };
     err.status = res.status;
     err.code = body.error;
+    err.max = body.max;
     throw err;
   }
   return { url: body.url, used: body.used ?? 0, limit: body.limit ?? 0 };
@@ -89,15 +118,9 @@ export async function uploadInlineImages(): Promise<void> {
       const { url } = await uploadImage(await toBlob(dataUrl));
       replaceEverywhere(dataUrl, url);
     } catch (e) {
-      const err = e as Error & { status?: number; code?: string };
-      if (
-        err.code === "quota" ||
-        err.code === "too-large" ||
-        err.code === "too-big-dimensions" ||
-        err.code === "not-an-image"
-      ) {
-        throw new UploadBlocked(err.message);
-      }
+      const err = e as Error & { status?: number; code?: string; max?: number };
+      const problem = problemOf(err);
+      if (problem) throw new UploadBlocked(err.message, problem);
       throw e;
     }
   }

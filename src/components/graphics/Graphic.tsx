@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { withHeadlines } from "@/lib/graphicText";
 import type { Design, GraphicKind, LookId, Team } from "@/lib/types";
 import { Fixture } from "./Fixture";
 import { pitchRect, tokenSize, type Rect } from "./LineupPitch";
@@ -152,7 +153,8 @@ const LAYOUTS: Partial<Record<LookId, Partial<Record<GraphicKind, Layout>>>> = {
  * and how big a player's token is, for the studio's drag handles. Follows the
  * look, since the looks with their own layout draw the pitch in their own place.
  */
-export function pitchLayout(team: Team, design: Design): { rect: Rect; token: number } {
+export function pitchLayout(team: Team, raw: Design): { rect: Rect; token: number } {
+  const design = withHeadlines(raw, team);
   const theme = buildTheme(design, team.colors);
   const inner = contentTheme(theme, design.format);
   const top = inner.bleedTop;
@@ -200,7 +202,10 @@ export function hasOwnLayout(look: LookId, kind: GraphicKind): boolean {
  * can render on the server (landing page) and in the studio, where the same DOM
  * node is exported to PNG.
  */
-export function Graphic({ team, design: raw, id }: { team: Team; design: Design; id?: string }) {
+export function Graphic({ team, design: stored, id }: { team: Team; design: Design; id?: string }) {
+  // Headlines still on a default print in the club's graphics language, so every
+  // layout below gets them already resolved.
+  const raw = withHeadlines(stored, team);
   // Photos can be limited to some graphics; drop them from the rest.
   const usesPhoto = !raw.backgroundOn || raw.backgroundOn.includes(raw.kind);
   const usesCutout = !raw.featureOn || raw.featureOn.includes(raw.kind);

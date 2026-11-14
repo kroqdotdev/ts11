@@ -1,0 +1,29 @@
+{
+  "close": "Luk",
+  "storageFull": {
+    "title": "Browserens lager er fuldt",
+    "description": "Din seneste ændring blev ikke gemt. Fjern et stort billede, og prøv igen."
+  },
+  "color": {
+    "pick": "Vælg {label}"
+  },
+  "image": {
+    "upload": "Upload",
+    "replace": "Skift",
+    "remove": "Fjern {label}",
+    "failed": "Billedet kunne ikke bruges.",
+    "notImage": "Filen er ikke et billede.",
+    "unreadableFile": "Filen kunne ikke læses.",
+    "unreadable": "Billedet kunne ikke læses. Prøv en PNG- eller JPEG-fil.",
+    "noCanvas": "Din browser kunne ikke behandle billedet."
+  },
+  "crest": {
+    "label": "Klublogo",
+    "onWhite": "Klublogoet ligger på en hvid firkant. På grafikkerne får det en pæn plade, eller du kan fjerne baggrunden, så det står direkte på farverne.",
+    "onSolid": "Klublogoet ligger på en ensfarvet firkant. På grafikkerne får det en pæn plade, eller du kan fjerne baggrunden, så det står direkte på farverne.",
+    "removeWhite": "Fjern hvid baggrund",
+    "remove": "Fjern baggrund",
+    "removed": "Baggrund fjernet",
+    "removeFailed": "Baggrunden kunne ikke fjernes. Prøv en PNG med gennemsigtig baggrund."
+  }
+}

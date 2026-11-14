@@ -1,0 +1,122 @@
+{
+  "title": "Club setup",
+  "screenTitle": "CLUB SETUP",
+  "steps": {
+    "name": "Name",
+    "crest": "Crest",
+    "kit": "Kit",
+    "squad": "Squad"
+  },
+  "progress": "Step {step} of {total}",
+  "back": "Back",
+  "skip": "Skip",
+  "continue": "Continue",
+  "open": "Open the studio",
+  "yourClub": "Your club",
+  "myClub": "My club",
+  "previewFile": "Preview: matchday.png",
+  "sample": {
+    "opponent": "Weybridge Albion",
+    "opponentShort": "Weybridge",
+    "competition": "League"
+  },
+  "name": {
+    "title": "What's your club called?",
+    "hint": "The crowd will spell it out. It also goes on your matchday graphics, and the short name goes on your badge.",
+    "label": "Club name",
+    "placeholder": "e.g. Ashby Vale",
+    "short": "Short name",
+    "note": "Your badge until you add a crest. Colours come next."
+  },
+  "crest": {
+    "title": "Add your crest",
+    "hint": "It goes on every graphic. A cut-out PNG sits straight on your colours; a crest on a white square gets a neat plate. Skip it to use a shield with your initials.",
+    "plate": "On a square, so it sits on a plate. Remove the background to lose the plate.",
+    "sharp": "Looking sharp. It sits on every graphic like this.",
+    "none": "Without a crest, your initials go on a shield in your colours."
+  },
+  "kit": {
+    "title": "What do you play in?",
+    "hint": "Pick the nearest kit and watch the crowd change. Fine-tune the colours below.",
+    "label": "Kit",
+    "yours": "Your colours",
+    "main": "Main colour",
+    "second": "Second colour",
+    "pattern": "Pattern"
+  },
+  "squad": {
+    "title": "Who's in the squad?",
+    "hint": "Paste it from the team chat, messages and all. Numbers, positions, (c) for the captain and a “Subs:” line are picked up; the chat is left out.",
+    "perSide": "Players per side",
+    "aSide": "{count}-a-side",
+    "label": "Squad list",
+    "placeholder": "1 Tom Hadley GK\n4 Ryan Desai DEF\n10 Callum Price MID\n9 Harry Lund ATT\nSubs: Talbot, Fenn"
+  },
+  "ticker": {
+    "kickoff": "KICK-OFF! ENJOY IT, {club}",
+    "welcome": "WELCOME TO {club}",
+    "askName": "WHAT IS YOUR CLUB CALLED?",
+    "sharp": "LOOKING SHARP",
+    "askCrest": "SHOW US YOUR CREST",
+    "askKit": "WHAT DO YOU PLAY IN?",
+    "players": "{count} PLAYERS IN THE SQUAD",
+    "askSquad": "WHO IS IN THE SQUAD?"
+  },
+  "boards": {
+    "free": "FREE FOREVER",
+    "noWatermark": "NO WATERMARK",
+    "noSignup": "NO SIGN-UP"
+  },
+  "kits": {
+    "red-white": "Red and white",
+    "royal": "Royal blue and white",
+    "black-white": "Black and white",
+    "green-white": "Green and white",
+    "claret-sky": "Claret and sky",
+    "tangerine": "Tangerine and black",
+    "navy-gold": "Navy and gold",
+    "sky-navy": "Sky blue and navy",
+    "amber-black": "Amber and black",
+    "maroon-white": "Maroon and white"
+  },
+  "trims": {
+    "white": "White",
+    "black": "Black",
+    "gold": "Gold",
+    "best": "Best contrast"
+  },
+  "kitWarning": "These two colours are very close, so names and numbers on your graphics will be hard to read. Pick a trim colour for the second one:",
+  "read": {
+    "none": "No players yet. You can add them later too.",
+    "found": "{count, plural, one {# player found.} other {# players found.}}",
+    "benched": "{count} listed as subs start on the bench; the rest fill their positions.",
+    "fill": "They fill the spots for their positions; the rest start on the bench.",
+    "guessed": "{count} with no position fill the gaps in list order.",
+    "chat": "{count, plural, one {# chat line left out.} other {# chat lines left out.}}",
+    "warnings": "{count, plural, one {# line needs a look} other {# lines need a look}}",
+    "captain": "Captain",
+    "captainLetter": "C",
+    "noPosition": "No position given",
+    "leftOut": "Left out ({count})",
+    "isPlayer": "It’s a player",
+    "ignored": {
+      "noName": "No name in it",
+      "message": "Reads like a message",
+      "time": "Has a time in it",
+      "tooLong": "Too long for a name",
+      "notPlayer": "Not a player",
+      "benchHeading": "Heading: the bench follows",
+      "startersHeading": "Heading: the starters follow"
+    },
+    "warning": {
+      "sameName": "Same name as no. {other} in the list",
+      "sameNumber": "Shirt {number} is taken twice"
+    }
+  },
+  "header": {
+    "haveAccount": "Already have an account?",
+    "signIn": "Sign in",
+    "example": "Try the example club",
+    "cancel": "Cancel"
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { EnvelopeSimpleIcon, XIcon } from "@phosphor-icons/react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { ResendButton } from "./AuthDialog";
@@ -24,6 +25,7 @@ export function VerifyBanner() {
   const { data } = useSession();
   const user = data?.user;
   const [hidden, setHidden] = useState<string | null>(hiddenFor);
+  const t = useTranslations("account.banner");
 
   if (!user || user.emailVerified || hidden === user.id) return null;
 
@@ -39,7 +41,7 @@ export function VerifyBanner() {
   return (
     <div
       role="region"
-      aria-label="Confirm your email"
+      aria-label={t("label")}
       className="flex shrink-0 flex-col gap-3 border-y-2 border-card-ink bg-card px-4 py-3 text-card-ink sm:flex-row sm:items-center lg:px-5"
     >
       <EnvelopeSimpleIcon
@@ -49,15 +51,17 @@ export function VerifyBanner() {
         className="hidden shrink-0 sm:block"
       />
       <p className="min-w-0 flex-1 text-sm leading-snug">
-        Confirm your email to start saving your clubs to your account. We sent a link to{" "}
-        <EmailText email={user.email} className="font-semibold" />.
+        {t.rich("body", {
+          email: user.email,
+          strong: () => <EmailText email={user.email} className="font-semibold" />,
+        })}
       </p>
       <div className="flex shrink-0 items-center gap-2">
         <ResendButton email={user.email} size="sm" />
         <button
           type="button"
           onClick={hide}
-          aria-label="Hide this message"
+          aria-label={t("hide")}
           className="grid size-8 place-items-center rounded-[3px] hover:bg-card-ink/10"
         >
           <XIcon size={16} weight="bold" aria-hidden />

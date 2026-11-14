@@ -1,19 +1,20 @@
 "use client";
 
 import { WarningIcon } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useId, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Window } from "@/components/lofi/Window";
 import { Button, Dialog, Field, TextInput } from "@/components/ui/controls";
+import { useRouter } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
 import { OWNER_KEY } from "@/lib/sync/engine";
 import { signOutSafely } from "@/lib/sync/signout";
-import { authMessage } from "./messages";
+import { useAuthMessage } from "./messages";
 
 /**
  * Deleting the account: the window says what goes and what stays; the dialog needs
- * DELETE typed, plus the password for accounts that have one.
+ * DELETE (SLET in Danish) typed, plus the password for accounts that have one.
  */
 export function DeleteAccount({
   userId,
@@ -24,14 +25,12 @@ export function DeleteAccount({
   hasPassword: boolean | null;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations("account.delete");
   return (
-    <Window title="Delete account" bodyClassName="flex flex-col items-start gap-4 p-4 sm:p-5">
-      <p className="text-sm leading-relaxed text-ink-soft">
-        Deleting your account removes the account, every club saved to it and all the images you
-        uploaded. The clubs in this browser stay as they are.
-      </p>
+    <Window title={t("title")} bodyClassName="flex flex-col items-start gap-4 p-4 sm:p-5">
+      <p className="text-sm leading-relaxed text-ink-soft">{t("body")}</p>
       <Button variant="destructive" onClick={() => setOpen(true)}>
-        Delete account
+        {t("button")}
       </Button>
       {open && (
         <DeleteDialog userId={userId} hasPassword={hasPassword} onClose={() => setOpen(false)} />
@@ -50,13 +49,16 @@ function DeleteDialog({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const t = useTranslations("account.delete");
+  const { message } = useAuthMessage();
+  const word = t("word");
   const [typed, setTyped] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ids = { typed: useId(), password: useId(), error: useId() };
   const needsPassword = hasPassword !== false;
-  const ready = typed.trim() === "DELETE" && (!needsPassword || password.length > 0) && !busy;
+  const ready = typed.trim() === word && (!needsPassword || password.length > 0) && !busy;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -66,7 +68,7 @@ function DeleteDialog({
     const { error } = await authClient.deleteUser(needsPassword ? { password } : {});
     if (error) {
       setBusy(false);
-      setError(authMessage(error).text);
+      setError(message(error).text);
       return;
     }
     await signOutSafely().catch(() => undefined);
@@ -79,20 +81,18 @@ function DeleteDialog({
       // Nothing to clear.
     }
     router.push("/");
-    toast("Your account is deleted", {
-      description: "The clubs in this browser are still here.",
-    });
+    toast(t("deleted"), { description: t("deletedHint") });
   }
 
   return (
     <Dialog
       open
       onOpenChange={(o) => !o && !busy && onClose()}
-      title="Delete your account?"
-      description="This can't be undone. Your saved clubs and uploaded images are deleted for good, on every device."
+      title={t("dialogTitle")}
+      description={t("dialogBody")}
     >
       <form noValidate onSubmit={submit} className="flex flex-col gap-4">
-        <Field label="Type DELETE to confirm" htmlFor={ids.typed}>
+        <Field label={t("typeWord", { word })} htmlFor={ids.typed}>
           <TextInput
             id={ids.typed}
             value={typed}
@@ -103,7 +103,7 @@ function DeleteDialog({
           />
         </Field>
         {needsPassword && (
-          <Field label="Your password" htmlFor={ids.password}>
+          <Field label={t("password")} htmlFor={ids.password}>
             <TextInput
               id={ids.password}
               type="password"
@@ -127,10 +127,10 @@ function DeleteDialog({
         )}
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Keep my account
+            {t("keep")}
           </Button>
           <Button type="submit" variant="destructive" disabled={!ready}>
-            {busy ? "Deleting…" : "Delete account"}
+            {busy ? t("deleting") : t("button")}
           </Button>
         </div>
       </form>

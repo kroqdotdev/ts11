@@ -52,6 +52,10 @@ migration: `pnpm db:generate`, and commit the files it writes to `drizzle/`.
 - **Account screens** follow [docs/design/accounts.md](docs/design/accounts.md); update its
   pre-flight table when you change them.
 - **Copy** is plain and in sentence case. Say what happens ("Download PNG", not "Submit").
+- **Two languages.** All text comes in English and Danish, and the Danish has to read as if a
+  Dane wrote it. Put interface text in `messages/en/` and `messages/da/`, and words printed on
+  graphics in `src/lib/graphicText.ts`. [docs/i18n.md](docs/i18n.md) has the rules and the
+  glossary.
 - **Accessibility:** keyboard access, visible focus, labels on inputs, reduced motion respected.
 - **Server code** lives in `src/server/` and imports `server-only`. Check the signed-in user
   and their ownership in every API route; never trust ids from the browser on their own.

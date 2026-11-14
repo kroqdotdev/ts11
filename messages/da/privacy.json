@@ -1,0 +1,48 @@
+{
+  "openStudio": "Åbn studiet",
+  "file": "privatliv.txt",
+  "title": "Privatliv",
+  "updated": "Senest opdateret {date}.",
+  "without": {
+    "title": "Uden konto",
+    "local": "Dine klubber, trupper, kampoplysninger og billeder bliver i din browser (i dens lokale lager). De bliver aldrig sendt til os. Grafikken bliver også lavet i din browser.",
+    "tracking": "Vi bruger ingen trafikmåling, ingen annoncer og ingen sporingscookies. Skrifttyperne kommer fra teamsheet11.com og ikke fra andre."
+  },
+  "controller": {
+    "title": "Hvem er dataansvarlig",
+    "body": "teamsheet11 drives af {name} (CVR {cvr}), Danmark, som er dataansvarlig for dine oplysninger. Har du spørgsmål om dine oplysninger, så skriv til <mail>{email}</mail>."
+  },
+  "account": {
+    "title": "Med konto",
+    "intro": "Det er frivilligt at oprette en konto. Gør du det, gemmer vi:",
+    "email": "din e-mailadresse og dit navn og, hvis du bruger en adgangskode, en hashet udgave af den",
+    "google": "hvis du logger ind med Google: det navn, den e-mailadresse og det link til dit profilbillede, som Google deler med os",
+    "clubs": "dine klubber, trupper, kampoplysninger og designindstillinger",
+    "uploads": "de klublogoer og billeder, du uploader",
+    "sessions": "for hver session: hvornår den startede, din IP-adresse og navnet på din browser, så vi kan holde kontoen sikker",
+    "use": "Vi bruger kun oplysningerne til at levere kontoen: til at logge dig ind, gemme dine klubber og sende de e-mails, kontoen kræver (når du skal bekræfte din e-mailadresse eller nulstille din adgangskode). Vi sælger dem ikke, vi bruger dem ikke til markedsføring, og vi sender ingen nyhedsbreve.",
+    "basis": "Vi behandler oplysningerne efter databeskyttelsesforordningens <nowrap>artikel 6, stk. 1, litra b</nowrap>, fordi det er nødvendigt for at levere den tjeneste, du har bedt om, og <nowrap>artikel 6, stk. 1, litra f</nowrap>, fordi vi har en legitim interesse i at holde den sikker, fx ved at begrænse antallet af loginforsøg."
+  },
+  "where": {
+    "title": "Hvor oplysningerne ligger",
+    "servers": "Hjemmesiden, databasen og de uploadede billeder ligger på Hetzners servere i Tyskland. E-mails fra kontoen bliver sendt gennem Amazon Web Services i Frankfurt i Tyskland. Begge handler kun efter vores instruks (de er vores databehandlere). Login med Google er omfattet af Googles egen privatlivspolitik.",
+    "links": "Uploadede billeder kan åbnes af alle, der har det præcise link. Linkene er lange og tilfældige, men upload ikke noget privat."
+  },
+  "cookies": {
+    "title": "Cookies",
+    "body": "Der er to cookies. Den ene husker i et år, om du læser siden på dansk eller engelsk. Den anden er logincookien, som kontoen skal bruge for at virke; den bliver slettet, når du logger ud. Der er ingen andre."
+  },
+  "retention": {
+    "title": "Hvor længe de gemmes",
+    "body": "Indtil du sletter din konto. Sletter du den på <account>kontosiden</account>, forsvinder kontoen, dine gemte klubber og dine uploadede billeder med det samme. En konto, hvor e-mailadressen aldrig bliver bekræftet, bliver slettet efter en uge. Kopier i databasens backups er væk inden for tre dage. Serverlogs, som indeholder IP-adresser, gemmes kort for at forhindre misbrug og bliver overskrevet automatisk."
+  },
+  "rights": {
+    "title": "Dine rettigheder",
+    "body": "Du har ret til indsigt i dine oplysninger og til at få dem rettet, udleveret eller slettet, og du kan gøre indsigelse mod, hvordan de bliver brugt. Det meste kan du selv klare på kontosiden. Skriv til <mail>{email}</mail> om alt andet, så får du svar inden for en måned.",
+    "complain": "Er du utilfreds med, hvordan vi behandler dine oplysninger, kan du klage til <authority>Datatilsynet</authority>."
+  },
+  "source": {
+    "title": "Åben kildekode",
+    "body": "teamsheet11 er open source, så du selv kan se, hvad den gør. <source>Læs kildekoden</source>."
+  }
+}

@@ -1,3 +1,7 @@
+import { useFormatter, useTranslations } from "next-intl";
+import { useCallback } from "react";
+import { APP_NAME } from "@/lib/brand";
+
 /** Errors as Better Auth's client returns them. */
 export interface AuthError {
   code?: string;
@@ -7,60 +11,76 @@ export interface AuthError {
 
 export type ErrorField = "email" | "password" | "form";
 
+/** A message key under `account.errors`. */
+export type AuthErrorKey =
+  | "generic"
+  | "rateLimited"
+  | "mismatch"
+  | "invalidEmail"
+  | "exists"
+  | "tooShort"
+  | "tooLong"
+  | "compromised"
+  | "wrongPassword"
+  | "notFresh"
+  | "linkExpired"
+  | "alreadyVerified"
+  | "offline"
+  | "enterEmail"
+  | "enterPassword"
+  | "notSame";
+
 /**
- * Better Auth's error codes in plain words, and the field each one belongs under.
+ * Better Auth's error codes as message keys, and the field each one belongs under.
  * Anything unknown gets a calm general line instead of the raw message.
  */
-export function authMessage(error: AuthError | null | undefined): {
-  text: string;
+export function authError(error: AuthError | null | undefined): {
+  key: AuthErrorKey;
   field: ErrorField;
 } {
-  if (!error) return { text: "That didn't work. Try again in a moment.", field: "form" };
-  if (error.status === 429) return { text: "Too many tries. Wait a few minutes.", field: "form" };
+  if (!error) return { key: "generic", field: "form" };
+  if (error.status === 429) return { key: "rateLimited", field: "form" };
   switch (error.code) {
     case "INVALID_EMAIL_OR_PASSWORD":
-      return {
-        text: "That email and password don't match. Check them, or reset your password.",
-        field: "password",
-      };
+      return { key: "mismatch", field: "password" };
     case "INVALID_EMAIL":
-      return { text: "That doesn't look like an email address.", field: "email" };
+      return { key: "invalidEmail", field: "email" };
     case "USER_ALREADY_EXISTS":
     case "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL":
-      return {
-        text: "There's already an account with that email. Sign in instead.",
-        field: "email",
-      };
+      return { key: "exists", field: "email" };
     case "PASSWORD_TOO_SHORT":
-      return { text: "Use at least 8 characters.", field: "password" };
+      return { key: "tooShort", field: "password" };
     case "PASSWORD_TOO_LONG":
-      return { text: "Use 128 characters or fewer.", field: "password" };
+      return { key: "tooLong", field: "password" };
     case "PASSWORD_COMPROMISED":
-      return {
-        text: "That password has shown up in a data leak. Pick a different one.",
-        field: "password",
-      };
+      return { key: "compromised", field: "password" };
     case "INVALID_PASSWORD":
-      return { text: "That password isn't right.", field: "password" };
+      return { key: "wrongPassword", field: "password" };
     case "SESSION_EXPIRED":
     case "SESSION_NOT_FRESH":
-      return {
-        text: "For your safety, sign out and sign in again first. Then you have a day to do this.",
-        field: "form",
-      };
+      return { key: "notFresh", field: "form" };
     case "INVALID_TOKEN":
     case "TOKEN_EXPIRED":
-      return { text: "This link has expired.", field: "form" };
+      return { key: "linkExpired", field: "form" };
     case "EMAIL_ALREADY_VERIFIED":
-      return { text: "Your email is already confirmed.", field: "form" };
+      return { key: "alreadyVerified", field: "form" };
   }
-  if (error.status === undefined || error.status === 0) {
-    return {
-      text: "Couldn't reach teamsheet11. Check your connection and try again.",
-      field: "form",
-    };
-  }
-  return { text: "That didn't work. Try again in a moment.", field: "form" };
+  if (error.status === undefined || error.status === 0) return { key: "offline", field: "form" };
+  return { key: "generic", field: "form" };
+}
+
+/** Turns a Better Auth error (or one of our own keys) into words in the page's language. */
+export function useAuthMessage() {
+  const t = useTranslations("account.errors");
+  const text = useCallback((key: AuthErrorKey) => t(key, { app: APP_NAME }), [t]);
+  const message = useCallback(
+    (error: AuthError | null | undefined) => {
+      const { key, field } = authError(error);
+      return { text: text(key), field };
+    },
+    [text],
+  );
+  return { text, message };
 }
 
 /** A rough check before asking the server; the server has the final say. */
@@ -80,7 +100,18 @@ export function sizeParts(bytes: number): { value: number; unit: "KB" | "MB"; di
   return { value: mb, unit: "MB", digits: mb < 10 ? 1 : 0 };
 }
 
-export function formatBytes(bytes: number): string {
-  const { value, unit, digits } = sizeParts(bytes);
-  return `${value.toFixed(digits)} ${unit}`;
+/** Formats bytes with the page's decimal comma or point: "2.5 MB", "2,5 MB". */
+export function useFormatBytes() {
+  const format = useFormatter();
+  return useCallback(
+    (bytes: number) => {
+      const { value, unit, digits } = sizeParts(bytes);
+      const n = format.number(value, {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+      });
+      return `${n} ${unit}`;
+    },
+    [format],
+  );
 }

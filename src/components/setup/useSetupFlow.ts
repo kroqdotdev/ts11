@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducedMotion } from "motion/react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useSyncExternalStore } from "react";
 import type { StadiumProps } from "@/components/lofi/LofiStadium";
 import { blankTeam, defaultDesign, defaultMatch } from "@/lib/demo";
@@ -11,9 +12,10 @@ import { uid } from "@/lib/id";
 import { KITS, type Kit } from "@/lib/kits";
 import { autoLineup, readSquad } from "@/lib/squad";
 import { flushStorage, useStudio } from "@/lib/store";
-import type { Colors, LookId, Player, Team, TeamSize } from "@/lib/types";
+import type { Colors, Language, LookId, Player, Team, TeamSize } from "@/lib/types";
 
-export const STEPS = ["Name", "Crest", "Kit", "Squad"] as const;
+/** The questions in order; their names are `setup.steps.<step>` in messages/. */
+export const STEPS = ["name", "crest", "kit", "squad"] as const;
 export const PATTERNS: LookId[] = ["block", "stripes", "hoops", "halves", "sash"];
 
 export interface Draft {
@@ -33,31 +35,45 @@ export interface Draft {
   custom: Colors | null;
 }
 
+/** Words the setup puts on the club and its sample graphic, in the interface language. */
+export interface DraftWords {
+  language: Language;
+  /** The name a club without one gets: "Your club" in the preview, "My club" when saved. */
+  unnamed: string;
+  opponent: string;
+  opponentShort: string;
+  competition: string;
+}
+
 /** The draft as a club on a sample fixture, for the preview on the first steps. */
-export function previewTeam(d: Draft): Team {
-  const base = blankTeam("preview");
+export function previewTeam(d: Draft, words: DraftWords): Team {
+  const base = blankTeam("preview", words.language);
   return {
     ...base,
-    name: d.name.trim() || "Your club",
-    shortName: (d.shortName.trim() || initials(d.name || "Your club")).toUpperCase(),
+    name: d.name.trim() || words.unnamed,
+    shortName: (d.shortName.trim() || initials(d.name || words.unnamed)).toUpperCase(),
     crest: d.crest,
     crestKind: d.crestKind,
     colors: d.colors,
-    match: defaultMatch({
-      opponent: "Weybridge Albion",
-      // When a long club name makes the graphic fall back to short names on both sides,
-      // the sample opponent still reads as a club, not just its initials.
-      opponentShort: "Weybridge",
-      opponentColors: { primary: "#f0c419", secondary: "#141414" },
-      competition: "League",
-      venue: "",
-      goals: [],
-    }),
+    match: defaultMatch(
+      {
+        opponent: words.opponent,
+        // When a long club name makes the graphic fall back to short names on both sides,
+        // the sample opponent still reads as a club, not just its initials.
+        opponentShort: words.opponentShort,
+        opponentColors: { primary: "#f0c419", secondary: "#141414" },
+        competition: words.competition,
+        venue: "",
+        goals: [],
+      },
+      words.language,
+    ),
   };
 }
 
-function buildTeam(d: Draft, id: string): Team {
-  const base = blankTeam(id);
+/** The club as saved; it prints its graphics in the language it was set up in. */
+function buildTeam(d: Draft, id: string, language: Language, unnamed: string): Team {
+  const base = blankTeam(id, language);
   const parsed = readSquad(d.squad, new Set(d.restored)).players.map((p) => ({
     ...p,
     id: uid(),
@@ -70,8 +86,8 @@ function buildTeam(d: Draft, id: string): Team {
   }));
   return {
     ...base,
-    name: d.name.trim() || "My club",
-    shortName: (d.shortName.trim() || initials(d.name || "My club")).toUpperCase(),
+    name: d.name.trim() || unnamed,
+    shortName: (d.shortName.trim() || initials(d.name || unnamed)).toUpperCase(),
     crest: d.crest,
     crestKind: d.crestKind,
     colors: d.colors,
@@ -135,6 +151,8 @@ export function useSetupFlow({
   const updateDesign = useStudio((s) => s.updateDesign);
   const reduce = useReducedMotion();
   const clock = useClock();
+  const language = useLocale();
+  const t = useTranslations("setup");
 
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
@@ -190,13 +208,13 @@ export function useSetupFlow({
 
   function finish() {
     const done = () => {
-      const team = buildTeam(d, uid());
+      const team = buildTeam(d, uid(), language, t("myClub"));
       completeSetup(team, first);
       updateDesign({
         look: d.look,
         colors: null,
         kind: team.players.length ? "lineup" : "fixture",
-        ...(first ? { headlines: defaultDesign().headlines } : {}),
+        ...(first ? { headlines: defaultDesign(language).headlines } : {}),
       });
       flushStorage();
       onDone();
@@ -207,14 +225,16 @@ export function useSetupFlow({
     window.setTimeout(done, 1500);
   }
 
-  const ticker = kickoff
-    ? `KICK-OFF! ENJOY IT, ${board(d.name)}`
-    : [
-        named ? `WELCOME TO ${board(d.name)}` : "WHAT IS YOUR CLUB CALLED?",
-        d.crest ? "LOOKING SHARP" : "SHOW US YOUR CREST",
-        "WHAT DO YOU PLAY IN?",
-        parsed.length ? `${parsed.length} PLAYERS IN THE SQUAD` : "WHO IS IN THE SQUAD?",
-      ][step];
+  const ticker = board(
+    kickoff
+      ? t("ticker.kickoff", { club: d.name })
+      : [
+          named ? t("ticker.welcome", { club: d.name }) : t("ticker.askName"),
+          d.crest ? t("ticker.sharp") : t("ticker.askCrest"),
+          t("ticker.askKit"),
+          parsed.length ? t("ticker.players", { count: parsed.length }) : t("ticker.askSquad"),
+        ][step],
+  );
 
   const kitLook = PATTERNS.includes(d.look) ? d.look : "block";
   const formation =
@@ -239,17 +259,27 @@ export function useSetupFlow({
     },
     boardText: [
       named ? board(d.name) : "TEAMSHEET11.COM",
-      "FREE FOREVER",
-      "NO WATERMARK",
-      "NO SIGN-UP",
+      board(t("boards.free")),
+      board(t("boards.noWatermark")),
+      board(t("boards.noSignup")),
     ],
     formation,
     waveKey: `${step}-${kickoff}`,
     kickable: true,
   };
 
+  /** Words for `previewTeam`, in the interface language. */
+  const draftWords: DraftWords = {
+    language,
+    unnamed: t("yourClub"),
+    opponent: t("sample.opponent"),
+    opponentShort: t("sample.opponentShort"),
+    competition: t("sample.competition"),
+  };
+
   return {
     d,
+    draftWords,
     patch,
     step,
     dir,

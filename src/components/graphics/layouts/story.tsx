@@ -5,6 +5,7 @@
  * kit lettering, a newspaper fold, a pitch-side LED ticker or a desktop taskbar.
  */
 import type { CSSProperties, ReactNode } from "react";
+import { textFor } from "@/lib/graphicText";
 import { alpha } from "@/lib/color";
 import { formatMatchDate } from "@/lib/format";
 import type { Design, Team } from "@/lib/types";
@@ -116,7 +117,7 @@ function PaperBand({ team, design, theme }: Props) {
   const width = theme.w - pad * 2;
   const name = bandName(team, width, theme, 120 * u).toUpperCase();
   const size = Math.min(250 * u, fit(name, width, 9999, theme));
-  const date = team.match.date ? formatMatchDate(team.match.date).toUpperCase() : "";
+  const date = team.match.date ? formatMatchDate(team.match.date, team.language).toUpperCase() : "";
   return (
     <Band>
       <div style={{ position: "absolute", left: pad, right: pad, top: 26 * u }}>
@@ -133,7 +134,7 @@ function PaperBand({ team, design, theme }: Props) {
             letterSpacing: "0.08em",
           }}
         >
-          <span>SPORT</span>
+          <span>{textFor(team).sport}</span>
           <span>{[design.footer, date].filter(Boolean).join("  ·  ")}</span>
         </div>
       </div>
@@ -182,13 +183,15 @@ function TickerBand({ team, design, theme }: Props) {
   const scale = big.length >= Math.min(2, words.length) ? 2 : 1;
   const text = (scale === 2 ? big : pick(1)).join(sep) || club;
   const m = team.match;
-  const info = [m.date ? formatMatchDate(m.date) : "", m.kickoff, m.venue]
+  const info = [m.date ? formatMatchDate(m.date, team.language) : "", m.kickoff, m.venue]
     .filter(Boolean)
     .join("  ");
   const infoText =
     ledWidth(info) + 4 <= cols
       ? info
-      : [m.date ? formatMatchDate(m.date) : "", m.kickoff].filter(Boolean).join("  ");
+      : [m.date ? formatMatchDate(m.date, team.language) : "", m.kickoff]
+          .filter(Boolean)
+          .join("  ");
   return (
     <Band>
       <div style={{ position: "absolute", left: pad, width, top: 40 * u }}>
@@ -233,10 +236,17 @@ function TaskbarBand({ team, design, theme }: Props) {
   const b = Math.max(3, Math.round(4 * u));
   const barH = 74 * u;
   const icon = 64 * u;
+  const t = textFor(team);
   const files = [
-    { label: `${(team.shortName || "club").toLowerCase()}.exe`, ball: true },
-    { label: "fixtures.ics", ball: false },
-    { label: (design.footer || "#matchday").replace(/^#/, "").toLowerCase() + ".txt", ball: false },
+    {
+      label: `${(team.shortName || t.files.club.replace(/\..*$/, "")).toLowerCase()}.exe`,
+      ball: true,
+    },
+    { label: t.files.fixtures, ball: false },
+    {
+      label: (design.footer || t.files.matchday).replace(/^#/, "").toLowerCase() + ".txt",
+      ball: false,
+    },
   ];
   return (
     <Band>
@@ -347,7 +357,7 @@ function TaskbarBand({ team, design, theme }: Props) {
             overflow: "hidden",
           }}
         >
-          {fileName(design.headlines[design.kind], design.kind === "goal" ? "exe" : "txt")}
+          {fileName(design.headlines[design.kind], design.kind === "goal" ? "exe" : "txt", team)}
         </div>
         <div style={{ flex: 1 }} />
         {team.match.kickoff && (

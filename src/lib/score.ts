@@ -1,4 +1,5 @@
 import { displayName } from "./format";
+import { graphicsLanguage } from "./language";
 import type { Goal, Match, NameStyle, Player, Team } from "./types";
 
 /** "45+2" → 45.2, "90" → 90; blank or unreadable minutes sort last. */
@@ -79,7 +80,7 @@ export function scorerOf(team: Team, goal: Goal): Player | undefined {
 /** How a scorer is printed. Used by every graphic so the same goal reads the same everywhere. */
 export function scorerLabel(team: Team, goal: Goal, style: NameStyle): string {
   const p = scorerOf(team, goal);
-  return p ? displayName(p, style) : goal.name.trim();
+  return p ? displayName(p, style, graphicsLanguage(team)) : goal.name.trim();
 }
 
 /** The goal the Goal graphic celebrates (the chosen one, else our latest), and the score just after it. */

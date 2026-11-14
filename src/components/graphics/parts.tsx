@@ -1,4 +1,5 @@
 import { ShieldIcon } from "@phosphor-icons/react/ssr";
+import { textFor } from "@/lib/graphicText";
 import type { CSSProperties, ReactNode } from "react";
 import {
   alpha,
@@ -60,6 +61,14 @@ const UNITS: Record<string, number> = {
   X: 1.02,
   Y: 1.0,
   Z: 0.97,
+  // Nordic and accented capitals: Æ runs as wide as W, Ø as O, Å as A.
+  Æ: 1.45,
+  Ø: 1.13,
+  Å: 1.06,
+  Ä: 1.06,
+  Ö: 1.13,
+  Ü: 1.04,
+  É: 0.95,
   "0": 0.9,
   "1": 0.77,
   "2": 0.88,
@@ -645,9 +654,13 @@ export function balance(text: string): string[] {
   if (words.length < 2) return [text];
   let best = [text];
   let bestDiff = Infinity;
+  // A club suffix or an initial ("IF", "BK", "FC", "J.") never stands on a line alone:
+  // "Søndervang / IF" reads as two things.
+  const lone = (line: string) => /^[\p{L}\p{N}]{1,2}\.?$/u.test(line);
   for (let k = 1; k < words.length; k++) {
     const a = words.slice(0, k).join(" ");
     const b = words.slice(k).join(" ");
+    if (lone(a) || lone(b)) continue;
     const diff = Math.abs(a.length - b.length);
     if (diff < bestDiff) {
       bestDiff = diff;
@@ -709,13 +722,14 @@ export function MatchMeta({
   showVersus?: boolean;
 }) {
   const m = team.match;
-  const when = [formatMatchDate(m.date), m.kickoff].filter(Boolean).join("  ");
+  const t = textFor(team);
+  const when = [formatMatchDate(m.date, team.language), m.kickoff].filter(Boolean).join("  ");
   size = px(theme, size);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: size * 0.32 }}>
       {showVersus && m.opponent.trim() && (
         <div style={{ fontSize: size * 1.25, fontWeight: theme.font.heavy, color: theme.accent }}>
-          {m.isHome ? "vs" : "at"} {m.opponent}
+          {m.isHome ? t.vs : t.at} {m.opponent}
         </div>
       )}
       <div

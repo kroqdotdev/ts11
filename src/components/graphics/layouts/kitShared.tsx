@@ -14,8 +14,8 @@ function widthFactor(text: string): number {
   if (!t.length) return 1;
   let sum = 0;
   for (const ch of t) {
-    if ("WM@".includes(ch)) sum += 1.4;
-    else if ("ODQGCNHUAVK0".includes(ch)) sum += 1.08;
+    if ("WM@Æ".includes(ch)) sum += 1.4;
+    else if ("ODQGCNHUAVK0ØÅÄÖÜ".includes(ch)) sum += 1.08;
     else if ("I1.,:;'!|() -".includes(ch)) sum += 0.5;
     else sum += 1;
   }
@@ -339,7 +339,7 @@ export function Roundel({
 /** "Sat 14 Nov · 15:00 · Vale Park Lane", leaving out what is not filled in. */
 export function whenLine(team: Team, withVenue = true): string {
   const m = team.match;
-  return [formatMatchDate(m.date), m.kickoff, withVenue ? m.venue : ""]
+  return [formatMatchDate(m.date, team.language), m.kickoff, withVenue ? m.venue : ""]
     .map((s) => s.trim())
     .filter(Boolean)
     .join(" · ");
@@ -358,7 +358,7 @@ export function subRows(team: Team, design: Design, max = 5): SubRow[] {
   const label = (id: string | null) => {
     const p = id ? byId.get(id) : undefined;
     if (!p) return "";
-    return `${design.showNumbers && p.number ? `${p.number} ` : ""}${displayName(p, design.nameStyle)}`;
+    return `${design.showNumbers && p.number ? `${p.number} ` : ""}${displayName(p, design.nameStyle, team.language)}`;
   };
   return team.match.subs
     .map((s) => ({ id: s.id, minute: s.minute.trim(), on: label(s.onId), off: label(s.offId) }))
@@ -367,11 +367,7 @@ export function subRows(team: Team, design: Design, max = 5): SubRow[] {
 }
 
 /** "Substitution" for a single change when the headline is still the default. */
-export function subsHeadline(design: Design, count: number): string {
-  return count === 1 && design.headlines.subs === "Substitutions"
-    ? "Substitution"
-    : design.headlines.subs;
-}
+export { subsHeadline } from "@/lib/graphicText";
 
 /** Rough height of a wrapped paragraph, for reserving space without measuring. */
 export function paragraphHeight(text: string, width: number, size: number, theme: Theme) {

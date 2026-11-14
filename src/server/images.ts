@@ -6,9 +6,14 @@ import { db, schema } from "./db";
 import { env } from "./env";
 import { storage } from "./storage";
 
+/**
+ * Why an upload was refused. `code` is stable and the client words it in the page's
+ * language; `message` is the English fallback for other API callers. `max` is the
+ * limit in bytes (too-large) or pixels on the longest side (too-big-dimensions).
+ */
 export type ImageError =
-  | { code: "too-large"; message: string }
-  | { code: "too-big-dimensions"; message: string }
+  | { code: "too-large"; message: string; max: number }
+  | { code: "too-big-dimensions"; message: string; max: number }
   | { code: "not-an-image"; message: string }
   | { code: "busy"; message: string }
   | { code: "quota"; message: string; used: number; limit: number };
@@ -59,7 +64,11 @@ export async function prepareImage(
 > {
   const { imageBytes, imageSide } = env.limits;
   const tooLarge = () =>
-    fail({ code: "too-large", message: `Images can be up to ${megabytes(imageBytes)}.` });
+    fail({
+      code: "too-large",
+      message: `Images can be up to ${megabytes(imageBytes)}.`,
+      max: imageBytes,
+    });
   if (input.byteLength > imageBytes) return tooLarge();
   if (running >= MAX_RUNNING) {
     return fail({ code: "busy", message: "Lots of uploads right now. Try again in a moment." });
@@ -82,6 +91,7 @@ export async function prepareImage(
       return fail({
         code: "too-big-dimensions",
         message: `Images can be up to ${imageSide} pixels on the longest side.`,
+        max: imageSide,
       });
     }
 

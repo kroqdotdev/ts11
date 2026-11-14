@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { APP_NAME } from "@/lib/brand";
 
 /** The mark: a referee's card printed with the 11. */
@@ -15,13 +16,16 @@ export function CardMark({ className = "", tilt = 8 }: { className?: string; til
 }
 
 export function Wordmark({ className = "" }: { className?: string }) {
+  const t = useTranslations("landing");
+  // A size in `className` replaces the default (two text-[…] classes don't override by order).
+  const size = /(^|\s)text-\[/.test(className) ? "" : "text-[26px]";
   return (
     <Link
       href="/"
       // The home page is heavy (it renders sample graphics); fetch it on click, not on view.
       prefetch={false}
-      aria-label={`${APP_NAME} home`}
-      className={`inline-flex items-center gap-[0.22em] rounded-md text-[26px] leading-none ${className}`}
+      aria-label={t("wordmark", { app: APP_NAME })}
+      className={`inline-flex items-center gap-[0.22em] rounded-md leading-none ${size} ${className}`}
     >
       <span className="font-signage tracking-tight">teamsheet</span>
       <CardMark />
