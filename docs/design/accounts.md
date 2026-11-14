@@ -12,8 +12,9 @@ check light, dark and a 390 px phone. This record was written afterwards: it sta
 plan, reviews the result against it and the design-taste checklist, and lists what the review
 changed. Treat it as the plan for future changes to these screens.
 
-Later work on these screens follows the plan-first order: pass 2's plan
-([accounts-pass-2.md](accounts-pass-2.md)) was committed before its build.
+Since then every account screen has been through the plan-first order: pass 2
+([accounts-pass-2.md](accounts-pass-2.md)) and pass 3 ([accounts-pass-3.md](accounts-pass-3.md),
+all the original screens) each committed their plan before building and checking.
 
 ## Design read
 

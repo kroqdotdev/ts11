@@ -56,3 +56,21 @@ heading says the action; no images.
 
 Checklist for all of the above: zero em and en dashes; one accent; AA contrast on text and
 buttons; focus visible; sentence case; nothing but Phosphor icons.
+
+## Built and checked (after the plan above)
+
+Every check was captured on the dev server after this plan was committed. Results:
+
+| Screen                        | Result                                                                                                                                                                                        | Evidence                                                                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 1. Sign-in dialog             | Pass: window title bar, intro line, Google first, labels above inputs, inline "That email and password don't match" under the field, "Check your inbox" names the address and offers a resend | [dialog and menu](screens/pass-3-dialog-menu.webp), [phone states](screens/pass-3-phone-states.webp)                           |
+| 2. Account menu and sync chip | Pass: email, "Storage and account", both sign-out options; chip shows Saving (pixel blink) and "Offline, will retry"; Not saved in pass 2; no chip while unconfirmed                          | [dialog and menu](screens/pass-3-dialog-menu.webp), [sync chip](screens/pass-3-sync-chip.webp)                                 |
+| 3. Confirm-email banner       | Pass (pass 2)                                                                                                                                                                                 | [pass-2.webp](screens/pass-2.webp)                                                                                             |
+| 4. `/account`                 | Pass: empty, loading, error, with images, signed out (pass 1 captures); delete dialog with typed DELETE and "That password isn't right."                                                      | [phone states](screens/pass-3-phone-states.webp), [account-states-phone.webp](screens/account-states-phone.webp)               |
+| 5. `/reset-password`          | Pass: incomplete link, expired link, success ("Password changed", signed out everywhere)                                                                                                      | [phone states](screens/pass-3-phone-states.webp), [expired](screens/pass-3-reset-expired.webp)                                 |
+| 6. `/privacy`                 | Pass: one window, signage headings, 15 px body, underlined links                                                                                                                              | [signin-dialog-and-reset.webp](screens/signin-dialog-and-reset.webp) shows the shared window style; privacy captured in pass 1 |
+| 7. Emails                     | Pass: table layout, grass title strip, heading names the action, yellow-card button, raw link below; holds at 360 px                                                                          | [emails](screens/pass-3-emails.webp)                                                                                           |
+
+Checklist: no em or en dashes in any account file or email; one accent; buttons and text at AA or
+better (measured in [accounts.md](accounts.md)); focus ring visible on the dialog's close button;
+sentence case throughout; Phosphor icons only. No screen needed a code change in this pass.
