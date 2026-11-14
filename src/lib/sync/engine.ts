@@ -99,6 +99,43 @@ const REASONS: Record<string, string> = {
 
 let current: { userId: string; push: () => Promise<void> } | null = null;
 
+type Studio = ReturnType<typeof useStudio.getState>;
+
+/** "Start over" (the store's resetAll) is the only way back to a not-set-up studio. */
+const startedOver = (s: Studio, prev: Studio) => prev.onboarded && !s.onboarded;
+
+let watching = false;
+
+/**
+ * While no account is syncing in this tab, a club deleted here is noted for the
+ * account this browser's clubs belong to, so that account deletes it too when it
+ * signs in here again. Starting over lets go of that account's clubs instead.
+ */
+export function watchSignedOut(): void {
+  if (watching) return;
+  watching = true;
+  useStudio.subscribe((s, prev) => {
+    if (current) return;
+    const owner = ownerOfLocalData();
+    if (!owner) return;
+    if (startedOver(s, prev)) {
+      write(OWNER_KEY, null);
+      return;
+    }
+    if (s.teams === prev.teams) return;
+    const m = read<SyncMeta>(metaKey(owner));
+    if (!m?.known) return;
+    const pending = m.pendingDeletes ?? [];
+    const now = new Set(s.teams.map((t) => t.id));
+    const gone = prev.teams
+      .map((t) => t.id)
+      .filter((id) => !now.has(id) && m.known[id]?.rev && !pending.includes(id));
+    if (!gone.length) return;
+    m.pendingDeletes = [...pending, ...gone];
+    write(metaKey(owner), m);
+  });
+}
+
 /** Saves pending changes straight away, e.g. before signing out. */
 export async function syncNow(): Promise<void> {
   await current?.push();
@@ -152,7 +189,25 @@ export function startSync(userId: string): () => void {
     const remote = await api<Pull>("/api/sync?since=0");
     if (stopped) return;
     const s = studio();
-    const plan = planLink(s.teams, s.onboarded, ownerOfLocalData(), userId, remote.clubs);
+    const owner = ownerOfLocalData();
+    const previous = owner && owner !== userId ? read<SyncMeta>(metaKey(owner)) : null;
+    const plan = planLink(
+      s.teams,
+      s.onboarded,
+      owner,
+      userId,
+      remote.clubs,
+      previous?.known ?? null,
+      hashOf,
+    );
+    // Kept from before: clubs this account deleted here and edits put aside for it.
+    const deleted = meta.pendingDeletes ?? [];
+    const parked = meta.parked ?? [];
+    if (previous && owner && plan.parked.length) {
+      const ids = new Set(plan.parked.map((t) => t.id));
+      previous.parked = [...(previous.parked ?? []).filter((t) => !ids.has(t.id)), ...plan.parked];
+      write(metaKey(owner), previous);
+    }
     let teams: Team[];
     let keepLocalDesign: boolean;
 
@@ -170,10 +225,23 @@ export function startSync(userId: string): () => void {
       teams = plan.teams;
       keepLocalDesign = plan.localOnly.length > 0;
     }
+    // Another account's design stays with it.
+    if (plan.fromOther) keepLocalDesign = false;
+
+    teams = teams.filter((t) => !deleted.includes(t.id));
+    for (const p of parked) {
+      const i = teams.findIndex((t) => t.id === p.id);
+      teams = i >= 0 ? teams.map((t, j) => (j === i ? p : t)) : [...teams, p];
+    }
 
     Object.assign(meta, emptyMeta(), { linked: true, rev: remote.rev });
     for (const c of remote.clubs) {
       if (!c.deleted) meta.known[c.id] = { rev: c.rev, hash: hashOf(c.data) };
+    }
+    // Still to delete in the account, and the put-aside edits to save on top of it.
+    meta.pendingDeletes = deleted.filter((id) => meta.known[id]);
+    for (const p of parked) {
+      meta.known[p.id] = { rev: remote.clubs.find((c) => c.id === p.id)?.rev ?? 0, hash: "" };
     }
     let design: Design | undefined;
     if (remote.state) {
@@ -190,7 +258,7 @@ export function startSync(userId: string): () => void {
       // Nothing of this account's or this browser's own: a fresh studio after another
       // account's data (club setup runs), else the example club stays, unsaved until
       // it's edited.
-      apply({ reset: plan.kind === "replace" });
+      apply({ reset: plan.fromOther });
       for (const t of studio().teams) meta.known[t.id] = { rev: 0, hash: hashOf(t) };
       meta.state ??= { rev: 0, hash: hashOf(studio().design) };
     } else {
@@ -323,8 +391,27 @@ export function startSync(userId: string): () => void {
     }, ms);
   }
 
+  /**
+   * "Start over" in this browser is never a deletion: the browser lets go of the
+   * account's clubs and loads them from the account again.
+   */
+  async function relink() {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    ready = false;
+    Object.assign(meta, emptyMeta());
+    save();
+    write(OWNER_KEY, null);
+    await pushing;
+    if (!stopped) void boot();
+  }
+
   const unsubscribe = useStudio.subscribe((s, prev) => {
     if (applying || stopped) return;
+    if (startedOver(s, prev)) {
+      void relink();
+      return;
+    }
     if (s.teams !== prev.teams) {
       // Only a club removed in this tab counts as a deletion, never one that's just
       // missing (another tab's stale copy, a failed write).

@@ -184,17 +184,20 @@ export function StadiumHero() {
             <Wordmark className="text-[24px]" />
           </span>
           {started ? (
-            <button
-              type="button"
-              onClick={() => {
-                skipSetup();
-                flushStorage();
-                router.push("/studio");
-              }}
-              className="lofi-press rounded-[4px] border-2 border-card-ink bg-paper px-3 py-1.5 text-sm font-medium text-ink shadow-[3px_3px_0_var(--card-ink)]"
-            >
-              Try the example club
-            </button>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <LandingSignIn setup />
+              <button
+                type="button"
+                onClick={() => {
+                  skipSetup();
+                  flushStorage();
+                  router.push("/studio");
+                }}
+                className="lofi-press rounded-[4px] border-2 border-card-ink bg-paper px-3 py-1.5 text-sm font-medium text-ink shadow-[3px_3px_0_var(--card-ink)]"
+              >
+                Try the example club
+              </button>
+            </div>
           ) : (
             <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <LandingSignIn />

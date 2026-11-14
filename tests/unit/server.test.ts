@@ -5,6 +5,7 @@ import { currentRev, imagesInUse, listClubs, pushClubs } from "@/server/clubs";
 import { db, schema } from "@/server/db";
 import { sendMail } from "@/server/mail";
 import { resetPassword, verifyEmail } from "@/server/mail-templates";
+import { removeUnconfirmedAccounts } from "@/server/cleanup";
 import { deleteImage, listImages, prepareImage, saveImage, usedBytes } from "@/server/images";
 
 const DIR = "./data/test-unit";
@@ -155,11 +156,15 @@ describe("images", () => {
     expect(a.ok).toBe(true);
     const again = await saveImage("u1", await png(40, 40, 1));
     expect(again.ok && again.reused).toBe(true);
-    // Parallel uploads of one image are stored once.
+    // Parallel uploads of one image are stored once. One still in flight answers "busy"
+    // (its link isn't live yet); trying again gets the stored image.
     const same = await png(41, 41, 3);
     const parallel = await Promise.all([saveImage("u1", same), saveImage("u1", same)]);
-    const ids = new Set(parallel.map((p) => (p.ok ? p.image.id : p.error.code)));
-    expect(ids.size).toBe(1);
+    const stored = parallel.flatMap((p) => (p.ok ? [p.image.id] : []));
+    expect(new Set(stored).size).toBe(1);
+    for (const p of parallel) if (!p.ok) expect(p.error.code).toBe("busy");
+    const retry = await saveImage("u1", same);
+    expect(retry.ok && retry.reused && retry.image.id).toBe(stored[0]);
     expect(listImages("u1")).toHaveLength(2);
 
     // LIMIT_ACCOUNT_BYTES=4000 in the test env: fill it with noisy images.
@@ -207,5 +212,55 @@ describe("mail", () => {
     expect(files.some((f) => f.includes("verify-box@example.org"))).toBe(true);
     const mail = JSON.parse(readFileSync(`${DIR}/outbox/${files[0]}`, "utf8"));
     expect(mail.to).toBe("box@example.org");
+  });
+});
+
+describe("cleanup", () => {
+  it("frees the space of an upload that never finished", async () => {
+    const before = usedBytes("u2");
+    db.insert(schema.image)
+      .values({
+        id: "abandoned0000000000000000",
+        userId: "u2",
+        key: "u/u2/abandoned.png",
+        sha256: "abandoned",
+        bytes: 1000,
+        width: 1,
+        height: 1,
+        contentType: "image/png",
+        ready: false,
+        createdAt: new Date(Date.now() - 60 * 60 * 1000),
+      })
+      .run();
+    expect(usedBytes("u2")).toBe(before + 1000);
+    const r = await saveImage("u2", await png(12, 12, 9));
+    expect(r.ok).toBe(true);
+    const rows = db.select().from(schema.image).all();
+    expect(rows.some((x) => x.id === "abandoned0000000000000000")).toBe(false);
+  });
+
+  it("removes accounts never confirmed after a week, and only those", () => {
+    const old = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+    db.insert(schema.user)
+      .values([
+        {
+          id: "stale",
+          name: "S",
+          email: "stale@example.org",
+          emailVerified: false,
+          createdAt: old,
+        },
+        { id: "fresh", name: "F", email: "fresh@example.org", emailVerified: false },
+        { id: "kept", name: "K", email: "kept@example.org", emailVerified: true, createdAt: old },
+      ])
+      .run();
+    expect(removeUnconfirmedAccounts()).toBe(1);
+    const ids = db
+      .select({ id: schema.user.id })
+      .from(schema.user)
+      .all()
+      .map((u) => u.id);
+    expect(ids).toEqual(expect.arrayContaining(["fresh", "kept", "u1", "u2"]));
+    expect(ids).not.toContain("stale");
   });
 });

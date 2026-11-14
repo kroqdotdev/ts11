@@ -229,5 +229,144 @@ await test("an inline crest is uploaded and replaced by its link", async () => {
   await ctx.close();
 });
 
+const signOutKeep = (page) =>
+  page.evaluate(() =>
+    fetch("/api/auth/sign-out", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    }),
+  );
+const accountClubs = async (ctx) =>
+  (await serverClubs(ctx)).clubs.filter((c) => !c.deleted).map((c) => c.data.name);
+
+await test("starting over while signed in never deletes the account's clubs", async () => {
+  const ctx = await b.newContext();
+  const page = await ctx.newPage();
+  await seedLocal(page, "Keep Me FC");
+  await verifiedAccount(ctx, "reset");
+  await page.reload();
+  await waitFor(async () => (await syncStatus(page)) === "saved", { label: "saved" });
+  // The menu doesn't offer it while syncing...
+  await page.getByRole("button", { name: "Team options" }).click();
+  assert(
+    !(await page.getByRole("menuitem", { name: "Start over" }).count()),
+    "Start over offered while signed in",
+  );
+  await page.keyboard.press("Escape");
+  // ...and if the studio is reset anyway, the account keeps its clubs and they come back.
+  await page.evaluate(() => window.__ts11Studio().resetAll());
+  await waitFor(async () => (await studioTeams(page)).includes("Keep Me FC"), {
+    label: "clubs back",
+  });
+  await page.waitForTimeout(2500);
+  assert((await accountClubs(ctx)).includes("Keep Me FC"), "club deleted from the account");
+  await ctx.close();
+});
+
+await test("a club deleted while signed out is deleted in the account at the next sign-in", async () => {
+  const ctx = await b.newContext();
+  const page = await ctx.newPage();
+  await seedLocal(page, "Stays FC");
+  const acc = await verifiedAccount(ctx, "offline-delete");
+  await page.reload();
+  await waitFor(async () => (await syncStatus(page)) === "saved", { label: "saved" });
+  await page.evaluate(() => {
+    const s = window.__ts11Studio();
+    s.addTeam?.();
+  });
+  await page.evaluate(() => window.__ts11Studio().updateTeam({ name: "Goes FC" }));
+  await waitFor(async () => (await accountClubs(ctx)).includes("Goes FC"), { label: "both saved" });
+  await signOutKeep(page);
+  await page.reload();
+  await page.waitForFunction(() => typeof window.__ts11Studio === "function");
+  await page.evaluate(() => {
+    const s = window.__ts11Studio();
+    s.removeTeam(s.teams.find((t) => t.name === "Goes FC").id);
+  });
+  await signIn(ctx, acc.email, acc.password);
+  await page.reload();
+  await waitFor(async () => (await syncStatus(page)) === "saved", { label: "saved again" });
+  await waitFor(async () => !(await accountClubs(ctx)).includes("Goes FC"), {
+    label: "deleted in account",
+  });
+  assert((await accountClubs(ctx)).includes("Stays FC"), "the other club went too");
+  await ctx.close();
+});
+
+await test("switching accounts: new clubs are offered, the last account's edits are kept for it", async () => {
+  const ctx = await b.newContext();
+  const page = await ctx.newPage();
+  await seedLocal(page, "A Saved FC");
+  const a = await verifiedAccount(ctx, "handover-a");
+  await page.reload();
+  await waitFor(async () => (await syncStatus(page)) === "saved", { label: "A saved" });
+  await signOutKeep(page);
+  await page.reload();
+  await page.waitForFunction(() => typeof window.__ts11Studio === "function");
+  // Signed out: edit A's club and make a new one.
+  await page.evaluate(() => {
+    const s = window.__ts11Studio();
+    s.updateTeam({ name: "A Edited Offline" });
+    s.addTeam?.();
+  });
+  await page.evaluate(() => window.__ts11Studio().updateTeam({ name: "Made Signed Out" }));
+  const bAcc = await verifiedAccount(ctx, "handover-b");
+  await page.reload();
+  await page.getByRole("dialog").getByText("Add this browser's clubs?").waitFor();
+  const dialog = await page.getByRole("dialog").innerText();
+  assert(!dialog.includes("A Edited Offline"), "A's club offered to B");
+  await page.getByRole("button", { name: "Add to my account" }).click();
+  await waitFor(async () => (await syncStatus(page)) === "saved", { label: "B saved" });
+  const bClubs = await accountClubs(ctx);
+  assert(bClubs.includes("Made Signed Out"), `B didn't get the new club: ${bClubs}`);
+  assert(!bClubs.some((n) => n.startsWith("A ")), `B got A's club: ${bClubs}`);
+  // A signs in here again: the offline edit is back and saved.
+  await signOutKeep(page);
+  await signIn(ctx, a.email, a.password);
+  await page.reload();
+  await page.waitForFunction(() => typeof window.__ts11Studio === "function");
+  await waitFor(async () => (await accountClubs(ctx)).includes("A Edited Offline"), {
+    label: "A's edit saved",
+  });
+  assert(bAcc.email, "B made");
+  await ctx.close();
+});
+
+await test("restoring a backup while signed in adds clubs and deletes none", async () => {
+  const ctx = await b.newContext();
+  const page = await ctx.newPage();
+  await seedLocal(page, "Before Backup FC");
+  await verifiedAccount(ctx, "restore");
+  await page.reload();
+  await waitFor(async () => (await syncStatus(page)) === "saved", { label: "saved" });
+  const backup = await page.evaluate(() => {
+    const s = window.__ts11Studio();
+    const team = { ...s.teams[0], id: "restored" + Date.now(), name: "From Backup FC" };
+    return JSON.stringify({
+      app: "teamsheet11",
+      version: 1,
+      teams: [team],
+      activeTeamId: team.id,
+      design: s.design,
+    });
+  });
+  await page.getByRole("button", { name: "Team options" }).click();
+  await page.getByRole("menuitem", { name: "Restore backup" }).click();
+  await page
+    .locator('input[type=file][aria-label="Backup file"]')
+    .first()
+    .setInputFiles({
+      name: "backup.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(backup),
+    });
+  await waitFor(async () => (await accountClubs(ctx)).includes("From Backup FC"), {
+    label: "backup club saved",
+  });
+  assert((await accountClubs(ctx)).includes("Before Backup FC"), "restore deleted a club");
+  await ctx.close();
+});
+
 await b.close();
 done();

@@ -13,8 +13,9 @@ const AuthDialog = dynamic(() => import("./AuthDialog").then((m) => m.AuthDialog
 /**
  * "Sign in" in the landing page header, for someone whose clubs are on another
  * device. Shown only once it's clear nobody is signed in; nothing while signed in.
+ * During club setup it reads "Already have an account? Sign in", as on /studio.
  */
-export function LandingSignIn() {
+export function LandingSignIn({ setup = false }: { setup?: boolean }) {
   const [state, setState] = useState<"unknown" | "out" | "in">("unknown");
   const [wanted, setWanted] = useState(false);
   const show = useAuthDialog((s) => s.show);
@@ -56,8 +57,10 @@ export function LandingSignIn() {
           setWanted(true);
           show("signin");
         }}
-        className="shrink-0 rounded-[4px] px-2 py-1.5 text-sm font-medium text-chalk underline-offset-4 hover:underline sm:px-3"
+        className="shrink-0 rounded-[4px] px-2 py-1.5 text-sm font-medium whitespace-nowrap text-chalk underline-offset-4 hover:underline sm:px-3"
       >
+        {/* Phones have room for "Sign in" only; the full label stays for screen readers. */}
+        {setup && <span className="max-sm:sr-only">Already have an account? </span>}
         Sign in
       </button>
       {wanted && <AuthDialog />}

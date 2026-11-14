@@ -48,7 +48,7 @@ export default function Page() {
         >
           <div className="flex flex-col gap-3">
             <h1 className="font-signage text-[40px] leading-none text-ink">Privacy</h1>
-            <p>Last updated 13 November 2026.</p>
+            <p>Last updated 14 November 2026.</p>
           </div>
 
           <Section title="Without an account">
@@ -127,9 +127,10 @@ export default function Page() {
               <Link href="/account" className={link}>
                 the account page
               </Link>{" "}
-              removes the account, your saved clubs and your uploaded images at once. Copies in
-              database backups are gone within three days. Server logs, which include IP addresses,
-              are kept briefly to stop abuse and are overwritten automatically.
+              removes the account, your saved clubs and your uploaded images at once. An account
+              whose email is never confirmed is removed after a week. Copies in database backups are
+              gone within three days. Server logs, which include IP addresses, are kept briefly to
+              stop abuse and are overwritten automatically.
             </p>
           </Section>
 

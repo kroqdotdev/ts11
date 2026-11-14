@@ -38,9 +38,34 @@ describe("planLink", () => {
 
   it("never mixes another account's clubs in, even into an empty account", () => {
     const plan = planLink([team("theirs")], true, "someone-else", "me", []);
-    expect(plan).toEqual({ kind: "replace", teams: [] });
+    expect(plan).toEqual({ kind: "replace", teams: [], fromOther: true, parked: [] });
     const withOwn = planLink([team("theirs")], true, "someone-else", "me", [row(team("mine"), 3)]);
     expect(withOwn).toMatchObject({ kind: "replace", teams: [{ id: "mine" }] });
+  });
+
+  it("offers clubs made here while signed out to the next account, never the last one's saved clubs", () => {
+    const saved = team("a-saved");
+    const madeSignedOut = team("new", "Signed Out FC");
+    const previous = { "a-saved": { rev: 2, hash: hashOf(saved) } };
+    const plan = planLink([saved, madeSignedOut], true, "a", "b", [], previous, hashOf);
+    expect(plan.kind).toBe("ask");
+    if (plan.kind !== "ask") return;
+    expect(plan.localOnly.map((t) => t.id)).toEqual(["new"]);
+    expect(plan.merged.map((t) => t.id)).toEqual(["new"]);
+    expect(plan.parked).toEqual([]);
+  });
+
+  it("puts the last account's unsaved edits aside for it instead of dropping them", () => {
+    const edited = team("a-club", "Edited while signed out");
+    const previous = { "a-club": { rev: 2, hash: "saved-version" } };
+    const plan = planLink([edited], true, "a", "b", [row(team("mine"), 1)], previous, hashOf);
+    expect(plan).toMatchObject({ kind: "replace", teams: [{ id: "mine" }], fromOther: true });
+    expect(plan.parked.map((t) => t.name)).toEqual(["Edited while signed out"]);
+  });
+
+  it("treats everything as the last account's when its record is missing", () => {
+    const plan = planLink([team("x")], true, "a", "b", [], null, hashOf);
+    expect(plan).toMatchObject({ kind: "replace", teams: [], parked: [] });
   });
 
   it("doesn't ask about clubs that are already in the account, and skips deleted ones", () => {

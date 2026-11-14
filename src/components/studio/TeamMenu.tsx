@@ -15,6 +15,8 @@ import { Button, Dialog, MenuButton, Select } from "@/components/ui/controls";
 import { SOURCE_URL } from "@/lib/brand";
 import { downloadBlob } from "@/lib/export";
 import { isSnapshot, snapshotOf, useActiveTeam, useStudio, useUi } from "@/lib/store";
+import { ownerOfLocalData } from "@/lib/sync/engine";
+import { useSyncState } from "@/lib/sync/state";
 
 type Confirm = "delete" | "reset" | null;
 
@@ -24,6 +26,9 @@ export function TeamMenu() {
   const team = useActiveTeam();
   const setActiveTeam = useStudio((s) => s.setActiveTeam);
   const [confirm, setConfirm] = useState<Confirm>(null);
+  // While an account is saving this browser's clubs, starting over would mean deleting
+  // them from the account; that's done club by club, or by deleting the account.
+  const syncing = useSyncState((s) => s.status !== "off" && s.status !== "unverified");
   const file = useRef<HTMLInputElement>(null);
 
   function backup() {
@@ -46,13 +51,20 @@ export function TeamMenu() {
     try {
       const data: unknown = JSON.parse(await f.text());
       if (!isSnapshot(data)) throw new Error();
-      useStudio.getState().replaceAll({
-        teams: data.teams,
+      const s = useStudio.getState();
+      // Clubs saved to an account stay: the backup's clubs are added or updated, so a
+      // restore never deletes anything from the account.
+      const keep = ownerOfLocalData() !== null;
+      const ids = new Set(data.teams.map((t) => t.id));
+      const teams = keep ? [...s.teams.filter((t) => !ids.has(t.id)), ...data.teams] : data.teams;
+      s.replaceAll({
+        teams,
         activeTeamId: data.activeTeamId,
-        design: { ...useStudio.getState().design, ...data.design },
+        design: { ...s.design, ...data.design },
       });
+      const n = `${data.teams.length} ${data.teams.length === 1 ? "team" : "teams"}`;
       toast.success("Backup restored", {
-        description: `${data.teams.length} ${data.teams.length === 1 ? "team" : "teams"} loaded.`,
+        description: keep ? `${n} added to your clubs.` : `${n} loaded.`,
       });
     } catch {
       toast.error("That file is not a teamsheet11 backup");
@@ -96,13 +108,17 @@ export function TeamMenu() {
             icon: <UploadSimpleIcon size={16} />,
             onSelect: () => file.current?.click(),
           },
-          "separator",
-          {
-            label: "Start over",
-            icon: <ArrowCounterClockwiseIcon size={16} />,
-            danger: true,
-            onSelect: () => setConfirm("reset"),
-          },
+          ...(syncing
+            ? []
+            : [
+                "separator" as const,
+                {
+                  label: "Start over",
+                  icon: <ArrowCounterClockwiseIcon size={16} />,
+                  danger: true,
+                  onSelect: () => setConfirm("reset"),
+                },
+              ]),
           "separator",
           {
             label: "Source code",

@@ -20,27 +20,53 @@ export interface SyncMeta {
   rev: number;
   known: Record<string, { rev: number; hash: string }>;
   state: { rev: number; hash: string } | null;
-  /** Clubs deleted here that the account hasn't recorded yet. */
+  /** Clubs deleted here (signed in or not) that the account hasn't recorded yet. */
   pendingDeletes: string[];
+  /**
+   * This account's clubs edited here while signed out, put aside when another account
+   * signed in on this browser. They come back, and are saved, when this one signs in here.
+   */
+  parked?: Team[];
 }
 
 export function emptyMeta(): SyncMeta {
   return { linked: false, rev: 0, known: {}, state: null, pendingDeletes: [] };
 }
 
-export type LinkPlan =
-  /** This browser holds another account's clubs: show this account's, never mix. */
-  | { kind: "replace"; teams: Team[] }
-  /** Nothing to decide: these are the clubs to show. */
-  | { kind: "use"; teams: Team[]; localOnly: Team[] }
-  /** Both sides have clubs the other lacks; the person chooses (merging is the default). */
-  | { kind: "ask"; prompt: MergePrompt; merged: Team[]; accountOnly: Team[]; localOnly: Team[] };
+/** Shared by every plan: what to put aside for the account that used this browser before. */
+interface Handover {
+  /** The browser's data belonged to another account until now. */
+  fromOther: boolean;
+  /** That account's clubs with edits not saved to it; kept for it, never shown here. */
+  parked: Team[];
+}
+
+export type LinkPlan = Handover &
+  (
+    | /** This browser holds only another account's clubs: show this account's, never mix. */
+      { kind: "replace"; teams: Team[] }
+      /** Nothing to decide: these are the clubs to show. */
+    | { kind: "use"; teams: Team[]; localOnly: Team[] }
+    /** Both sides have clubs the other lacks; the person chooses (merging is the default). */
+    | {
+        kind: "ask";
+        prompt: MergePrompt;
+        merged: Team[];
+        accountOnly: Team[];
+        localOnly: Team[];
+      }
+  );
 
 const label = (t: Team) => t.name.trim() || "Unnamed club";
 
 /**
  * The first time this browser meets an account. `owner` is the account the local
- * studio data was last synced with (null for data made while signed out).
+ * studio data was last synced with (null for data made while signed out), and
+ * `previous` is what that account had saved (its `known` map), when it's another one.
+ *
+ * Another account's saved clubs never move into this one. Clubs this browser made
+ * that no account has (created while signed out) are offered, as for a browser that
+ * never signed in.
  */
 export function planLink(
   local: Team[],
@@ -48,17 +74,26 @@ export function planLink(
   owner: string | null,
   userId: string,
   remote: RemoteClub[],
+  previous: SyncMeta["known"] | null = null,
+  hashOf: (v: unknown) => string = () => "",
 ): LinkPlan {
   const account = remote.filter((r) => !r.deleted && r.data).map((r) => r.data as Team);
-  if (owner && owner !== userId) return { kind: "replace", teams: account };
-
   const ids = new Set(account.map((t) => t.id));
   // A browser that was never set up only holds the example club: not worth keeping.
   const own = onboarded ? local : [];
-  const localOnly = own.filter((t) => !ids.has(t.id));
-  if (account.length === 0) return { kind: "use", teams: own, localOnly };
-  if (localOnly.length === 0) return { kind: "use", teams: account, localOnly: [] };
+  const fromOther = owner !== null && owner !== userId;
+  // Without a record of what the other account saved, treat everything as its own.
+  const known = fromOther ? previous : null;
+  const parked = known ? own.filter((t) => known[t.id] && hashOf(t) !== known[t.id].hash) : [];
+  const candidates = !fromOther ? own : known ? own.filter((t) => !known[t.id]) : [];
+  const localOnly = candidates.filter((t) => !ids.has(t.id));
+  const base = { fromOther, parked };
+
+  if (fromOther && localOnly.length === 0) return { ...base, kind: "replace", teams: account };
+  if (!fromOther && account.length === 0) return { ...base, kind: "use", teams: own, localOnly };
+  if (localOnly.length === 0) return { ...base, kind: "use", teams: account, localOnly: [] };
   return {
+    ...base,
     kind: "ask",
     prompt: { localNames: localOnly.map(label), accountNames: account.map(label) },
     merged: [...account, ...localOnly],

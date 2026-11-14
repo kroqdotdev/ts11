@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import sharp, { type Metadata, type OutputInfo } from "sharp";
 import { db, schema } from "./db";
 import { env } from "./env";
@@ -126,6 +126,9 @@ export async function prepareImage(
  * reserved in one synchronous transaction before anything is stored, so parallel
  * uploads can't slip past the quota or store the same image twice.
  */
+/** How long an unfinished upload may hold its space before it counts as abandoned. */
+const STALE_UPLOAD_MS = 10 * 60_000;
+
 export async function saveImage(
   userId: string,
   input: Uint8Array,
@@ -137,13 +140,39 @@ export async function saveImage(
   const id = randomUUID().replace(/-/g, "");
   const key = `u/${userId}/${id}.${prepared.type.split("/")[1]}`;
   const limit = env.limits.accountBytes;
+  let staleKeys: string[] = [];
 
   const reserved = db.transaction((tx) => {
+    // An upload that never finished (the server stopped part-way) frees its space.
+    const stale = tx
+      .select({ id: schema.image.id, key: schema.image.key })
+      .from(schema.image)
+      .where(
+        and(
+          eq(schema.image.userId, userId),
+          eq(schema.image.ready, false),
+          lt(schema.image.createdAt, new Date(Date.now() - STALE_UPLOAD_MS)),
+        ),
+      )
+      .all();
+    if (stale.length) {
+      tx.delete(schema.image)
+        .where(
+          inArray(
+            schema.image.id,
+            stale.map((r) => r.id),
+          ),
+        )
+        .run();
+      staleKeys = stale.map((r) => r.key);
+    }
     const same = tx
       .select()
       .from(schema.image)
       .where(and(eq(schema.image.userId, userId), eq(schema.image.sha256, sha256)))
       .get();
+    // The same image is still on its way in another request; its link isn't live yet.
+    if (same && !same.ready) return { kind: "busy" as const };
     if (same) return { kind: "reused" as const, row: same };
     const used =
       tx
@@ -168,6 +197,10 @@ export async function saveImage(
     return { kind: "new" as const, row };
   });
 
+  for (const k of staleKeys) await storage.remove(k).catch(() => undefined);
+  if (reserved.kind === "busy") {
+    return fail({ code: "busy", message: "That image is still uploading. Try again in a moment." });
+  }
   if (reserved.kind === "full") {
     return fail({
       code: "quota",
@@ -177,7 +210,6 @@ export async function saveImage(
     });
   }
   if (reserved.kind === "reused") {
-    // A parallel upload of the same image may still be on its way; it's the same bytes.
     return { ok: true, image: toStored(reserved.row), reused: true };
   }
 

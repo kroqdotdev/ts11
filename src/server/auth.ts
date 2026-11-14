@@ -8,6 +8,7 @@ import { env } from "./env";
 import { sendMail } from "./mail";
 import { resetPassword, verifyEmail } from "./mail-templates";
 import { storage } from "./storage";
+import { startCleanup } from "./cleanup";
 
 /** Per-route limits for the sign-in endpoints, per client IP. */
 const strict = env.relaxedRateLimits ? 1000 : 1;
@@ -149,6 +150,8 @@ export const auth = betterAuth({
 
   plugins: [nextCookies()],
 });
+
+startCleanup();
 
 export type Session = typeof auth.$Infer.Session;
 

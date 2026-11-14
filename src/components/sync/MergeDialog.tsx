@@ -72,6 +72,7 @@ export function MergeDialog() {
         </div>
         <div className="flex flex-col gap-1">
           <dt className="font-semibold text-ink">In your account</dt>
+          {merge.accountNames.length === 0 && <dd className="text-ink-soft">No clubs yet</dd>}
           {merge.accountNames.map((name, i) => (
             <dd key={i} className="text-ink-soft">
               {name}

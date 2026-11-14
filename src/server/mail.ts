@@ -29,7 +29,8 @@ export async function sendMail(mail: Mail): Promise<void> {
       `${Date.now()}-${mail.kind}-${mail.to.replace(/[^a-z0-9@.]/gi, "_")}.json`,
     );
     await writeFile(file, JSON.stringify(mail, null, 2));
-    if (!process.env.VITEST) console.info(`[mail] ${mail.kind} for ${mail.to} written to ${file}`);
+    // The address stays out of the log (it is in the file name, on disk only).
+    if (!process.env.VITEST) console.info(`[mail] ${mail.kind} mail written to the outbox`);
     return;
   }
 
@@ -63,6 +64,8 @@ export async function sendMail(mail: Mail): Promise<void> {
   );
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`SES refused the email (${res.status}): ${body.slice(0, 300)}`);
+    // SES may quote the recipient; errors end up in logs, so addresses are masked.
+    const detail = body.slice(0, 300).replace(/[^\s"'<>@]+@[^\s"'<>@]+/g, "<address>");
+    throw new Error(`SES refused the email (${res.status}): ${detail}`);
   }
 }

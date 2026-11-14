@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useSession } from "@/lib/auth-client";
 import { useHydrated, useStudio } from "@/lib/store";
-import { startSync } from "@/lib/sync/engine";
+import { startSync, watchSignedOut } from "@/lib/sync/engine";
 import { useSyncState } from "@/lib/sync/state";
 import { MergeDialog } from "./MergeDialog";
 
@@ -16,6 +16,8 @@ export function SyncProvider() {
   const hydrated = useHydrated();
   const userId = data?.user.id ?? null;
   const verified = data?.user.emailVerified ?? false;
+
+  useEffect(() => watchSignedOut(), []);
 
   useEffect(() => {
     // Hooks for the end-to-end tests; not part of the production bundle's behaviour.

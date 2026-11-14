@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   const saved = await saveImage(id, body);
   if (!saved.ok) {
     const status =
-      saved.error.code === "quota" ? 413 : saved.error.code === "not-an-image" ? 415 : 413;
+      saved.error.code === "busy" ? 503 : saved.error.code === "not-an-image" ? 415 : 413;
     return problem(
       status,
       saved.error.code,
