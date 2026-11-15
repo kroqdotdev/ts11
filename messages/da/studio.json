@@ -16,7 +16,8 @@
     "lineupShort": "Opstilling",
     "squad": "Trup",
     "match": "Kamp",
-    "design": "Design"
+    "design": "Design",
+    "club": "Klub"
   },
   "size": "Format",
   "formats": {
@@ -286,15 +287,17 @@
     "lettering": "Bogstaver i baggrunden",
     "letteringHint": "Din forkortelse, {short}, som omrids"
   },
-  "squad": {
-    "club": "Klub",
+  "club": {
+    "title": "Klub",
     "name": "Klubnavn",
     "short": "Forkortelse",
     "crestHint": "Uden klublogo bruges et skjold i dine farver med dine forbogstaver.",
     "main": "Hovedfarve",
     "second": "Anden farve",
     "language": "Sprog på grafikken",
-    "languageHint": "De ord, der står på klubbens grafikker, fx overskrifterne.",
+    "languageHint": "De ord, der står på klubbens grafikker, fx overskrifterne."
+  },
+  "squad": {
     "players": "Spillere ({count})",
     "paste": "Indsæt liste",
     "empty": "Ingen spillere endnu",

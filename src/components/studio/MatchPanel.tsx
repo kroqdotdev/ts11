@@ -313,11 +313,13 @@ export function MatchPanel() {
         <ColorField
           label={t("theirMain")}
           value={m.opponentColors.primary}
+          logo={m.opponentCrest}
           onChange={(primary) => updateMatch({ opponentColors: { ...m.opponentColors, primary } })}
         />
         <ColorField
           label={t("theirSecond")}
           value={m.opponentColors.secondary}
+          logo={m.opponentCrest}
           onChange={(secondary) =>
             updateMatch({ opponentColors: { ...m.opponentColors, secondary } })
           }

@@ -5,7 +5,14 @@
     "description": "Your last change was not saved. Remove a large photo and try again."
   },
   "color": {
-    "pick": "Pick {label}"
+    "pick": "Pick {label}",
+    "inLogo": "In the logo",
+    "fromLogo": "Pick from logo",
+    "fromScreen": "Pick from screen",
+    "logoArea": "The logo, to pick a colour from",
+    "logoHint": "Click a colour in the logo",
+    "logoFailed": "This logo can't be read here. Use the colours below, or type the code.",
+    "back": "Back"
   },
   "image": {
     "upload": "Upload",

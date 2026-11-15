@@ -16,7 +16,8 @@
     "lineupShort": "Line-up",
     "squad": "Squad",
     "match": "Match",
-    "design": "Design"
+    "design": "Design",
+    "club": "Club"
   },
   "size": "Size",
   "formats": {
@@ -286,15 +287,17 @@
     "lettering": "Background lettering",
     "letteringHint": "Your short name, {short}, in outline"
   },
-  "squad": {
-    "club": "Club",
+  "club": {
+    "title": "Club",
     "name": "Team name",
     "short": "Short name",
     "crestHint": "Without one, a shield in your colours with your initials is used.",
     "main": "Main colour",
     "second": "Second colour",
     "language": "Graphics language",
-    "languageHint": "The words printed on this club's graphics, such as the headlines.",
+    "languageHint": "The words printed on this club's graphics, such as the headlines."
+  },
+  "squad": {
     "players": "Players ({count})",
     "paste": "Paste list",
     "empty": "No players yet",

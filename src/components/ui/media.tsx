@@ -1,7 +1,13 @@
 "use client";
 
 import { Popover } from "@base-ui/react/popover";
-import { ImageSquareIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import {
+  EyedropperIcon,
+  ImageSquareIcon,
+  ShieldIcon,
+  TrashIcon,
+  UploadSimpleIcon,
+} from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
@@ -11,6 +17,8 @@ import { isHex, normalizeHex } from "@/lib/color";
 import {
   crestBackground,
   crestKindOf,
+  crestPalette,
+  crestPixels,
   removeCrestBackground,
   type CrestBackground,
 } from "@/lib/crest";
@@ -33,14 +41,273 @@ const SWATCHES = [
   "#f4f4f1",
 ];
 
+/** The browser's screen eyedropper (Chromium only, for now). */
+type EyeDropperApi = new () => { open: () => Promise<{ sRGBHex: string }> };
+function eyeDropper(): EyeDropperApi | undefined {
+  return typeof window === "undefined"
+    ? undefined
+    : (window as unknown as { EyeDropper?: EyeDropperApi }).EyeDropper;
+}
+
+/** A crest's main colours, read once per image while the picker is open. */
+function useCrestPalette(src: string | null | undefined): string[] {
+  const [read, setRead] = useState<{ src: string; colors: string[] } | null>(null);
+  useEffect(() => {
+    if (!src) return;
+    let live = true;
+    void crestPalette(src).then((colors) => live && setRead({ src, colors }));
+    return () => {
+      live = false;
+    };
+  }, [src]);
+  return src && read?.src === src ? read.colors : [];
+}
+
+// The space inside the popup (w-64, p-3) and the frame's 2px borders.
+const BOX = { w: 220, h: 176 };
+
+/**
+ * The crest drawn big, for picking the exact colour of any part of it: point to see the
+ * colour, click (or drag on a phone) to take it.
+ */
+function CrestColorPicker({
+  src,
+  onPick,
+  onBack,
+}: {
+  src: string;
+  onPick: (hex: string) => void;
+  onBack: () => void;
+}) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const pixels = useRef<{ data: ImageData; w: number; h: number } | null>(null);
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [hover, setHover] = useState<string | null>(null);
+  const pressed = useRef(false);
+  const t = useTranslations("ui.color");
+
+  useEffect(() => {
+    let live = true;
+    crestPixels(src, 512)
+      .then((px) => {
+        if (!live) return;
+        pixels.current = px;
+        const scale = Math.min(BOX.w / px.w, BOX.h / px.h);
+        setSize({ w: Math.round(px.w * scale), h: Math.round(px.h * scale) });
+      })
+      .catch(() => live && setFailed(true));
+    return () => {
+      live = false;
+    };
+  }, [src]);
+
+  // Paint once the canvas is on the page at its final size.
+  useEffect(() => {
+    const px = pixels.current;
+    const el = canvas.current;
+    if (!px || !el || !size) return;
+    el.width = px.w;
+    el.height = px.h;
+    el.getContext("2d")?.putImageData(px.data, 0, 0);
+  }, [size]);
+
+  function colorAt(e: React.PointerEvent<HTMLCanvasElement>): string | null {
+    const px = pixels.current;
+    if (!px || !size) return null;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.floor(((e.clientX - rect.left) / rect.width) * px.w);
+    const y = Math.floor(((e.clientY - rect.top) / rect.height) * px.h);
+    if (x < 0 || y < 0 || x >= px.w || y >= px.h) return null;
+    const i = (y * px.w + x) * 4;
+    const d = px.data.data;
+    // See-through pixels have no colour of their own.
+    if (d[i + 3] < 128) return null;
+    return normalizeHex(
+      "#" + [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, "0")).join(""),
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        className="grid place-items-center rounded-[2px] border-2 border-ink/25"
+        style={{
+          height: BOX.h + 4,
+          // A chequerboard, so see-through parts read as see-through.
+          background: "repeating-conic-gradient(#d9d9d4 0 25%, #f4f4f1 0 50%) 0 0 / 14px 14px",
+        }}
+      >
+        {failed ? (
+          <p className="px-4 text-center text-xs text-ink-soft">{t("logoFailed")}</p>
+        ) : (
+          size && (
+            <canvas
+              ref={canvas}
+              role="img"
+              aria-label={t("logoArea")}
+              className="cursor-crosshair touch-none"
+              style={{ width: size.w, height: size.h }}
+              onPointerDown={(e) => {
+                pressed.current = true;
+                e.currentTarget.setPointerCapture(e.pointerId);
+                const c = colorAt(e);
+                setHover(c);
+                if (c) onPick(c);
+              }}
+              onPointerMove={(e) => {
+                const c = colorAt(e);
+                setHover(c);
+                if (pressed.current && c) onPick(c);
+              }}
+              onPointerUp={() => {
+                pressed.current = false;
+              }}
+              onPointerLeave={() => !pressed.current && setHover(null)}
+            />
+          )
+        )}
+      </div>
+      <div className="flex items-center gap-2 text-xs text-ink-soft">
+        <span
+          aria-hidden
+          className="size-4 shrink-0 rounded-[2px] border-2 border-ink/40"
+          style={{ background: hover ?? "transparent" }}
+        />
+        <span className="min-w-0 flex-1 font-mono uppercase">
+          {hover ?? <span className="font-sans normal-case">{t("logoHint")}</span>}
+        </span>
+        <button
+          type="button"
+          onClick={onBack}
+          // The "Pick from logo" button that opened this is gone: keep the focus in the popup.
+          autoFocus
+          className="shrink-0 font-semibold text-ink underline-offset-2 hover:underline"
+        >
+          {t("back")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Swatch({
+  color,
+  value,
+  onChange,
+}: {
+  color: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={color}
+      title={color.toUpperCase()}
+      onClick={() => onChange(color)}
+      className={clsx(
+        "aspect-square rounded-[2px] border-2 border-ink/25 transition-transform hover:scale-110",
+        color.toLowerCase() === value.toLowerCase() && "border-ink shadow-[2px_2px_0_var(--card)]",
+      )}
+      style={{ background: color }}
+    />
+  );
+}
+
+function ColorPopup({
+  value,
+  onChange,
+  logo,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  logo?: string | null;
+}) {
+  const [fromLogo, setFromLogo] = useState(false);
+  const logoButton = useRef<HTMLButtonElement>(null);
+  const backToPicker = useRef(false);
+  useEffect(() => {
+    // Back from the logo: focus returns to the button that opened it.
+    if (!fromLogo && backToPicker.current) logoButton.current?.focus();
+    backToPicker.current = false;
+  }, [fromLogo]);
+  const palette = useCrestPalette(logo);
+  const Dropper = eyeDropper();
+  const t = useTranslations("ui.color");
+
+  async function fromScreen() {
+    if (!Dropper) return;
+    try {
+      const { sRGBHex } = await new Dropper().open();
+      if (isHex(sRGBHex)) onChange(normalizeHex(sRGBHex));
+    } catch {
+      // Cancelled with Escape: nothing to do.
+    }
+  }
+
+  return (
+    <>
+      {logo && fromLogo ? (
+        <CrestColorPicker
+          // A new logo starts the picker afresh.
+          key={logo}
+          src={logo}
+          onPick={onChange}
+          onBack={() => {
+            backToPicker.current = true;
+            setFromLogo(false);
+          }}
+        />
+      ) : (
+        <HexColorPicker color={value} onChange={onChange} className="!w-full" />
+      )}
+      {logo && palette.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-ink">{t("inLogo")}</span>
+          <div className="grid grid-cols-7 gap-1.5">
+            {palette.map((c) => (
+              <Swatch key={c} color={c} value={value} onChange={onChange} />
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="grid grid-cols-7 gap-1.5">
+        {SWATCHES.map((c) => (
+          <Swatch key={c} color={c} value={value} onChange={onChange} />
+        ))}
+      </div>
+      {(logo || Dropper) && (
+        <div className="flex flex-wrap gap-2">
+          {logo && !fromLogo && (
+            <Button ref={logoButton} size="sm" onClick={() => setFromLogo(true)}>
+              <ShieldIcon size={16} />
+              {t("fromLogo")}
+            </Button>
+          )}
+          {Dropper && (
+            <Button size="sm" onClick={() => void fromScreen()}>
+              <EyedropperIcon size={16} />
+              {t("fromScreen")}
+            </Button>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
 export function ColorField({
   label,
   value,
   onChange,
+  logo,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  /** The crest these colours belong to: its colours are offered, and it can be picked from. */
+  logo?: string | null;
 }) {
   const [draft, setDraft] = useState(value);
   const [synced, setSynced] = useState(value);
@@ -64,24 +331,9 @@ export function ColorField({
             style={{ background: value }}
           />
           <Popover.Portal>
-            <Popover.Positioner sideOffset={8} align="start" className="z-50">
-              <Popover.Popup className="flex w-60 flex-col gap-3 rounded-[4px] border-2 border-edge bg-paper p-3 shadow-[5px_5px_0_var(--edge)] transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
-                <HexColorPicker color={value} onChange={onChange} className="!w-full" />
-                <div className="grid grid-cols-7 gap-1.5">
-                  {SWATCHES.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      aria-label={c}
-                      onClick={() => onChange(c)}
-                      className={clsx(
-                        "aspect-square rounded-[2px] border-2 border-ink/25 transition-transform hover:scale-110",
-                        c === value && "border-ink shadow-[2px_2px_0_var(--card)]",
-                      )}
-                      style={{ background: c }}
-                    />
-                  ))}
-                </div>
+            <Popover.Positioner sideOffset={8} align="start" collisionPadding={8} className="z-50">
+              <Popover.Popup className="flex w-64 flex-col gap-3 rounded-[4px] border-2 border-edge bg-paper p-3 shadow-[5px_5px_0_var(--edge)] transition-[scale,opacity] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+                <ColorPopup value={value} onChange={onChange} logo={logo} />
               </Popover.Popup>
             </Popover.Positioner>
           </Popover.Portal>

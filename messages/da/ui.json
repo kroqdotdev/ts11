@@ -5,7 +5,14 @@
     "description": "Din seneste ændring blev ikke gemt. Fjern et stort billede, og prøv igen."
   },
   "color": {
-    "pick": "Vælg {label}"
+    "pick": "Vælg {label}",
+    "inLogo": "I logoet",
+    "fromLogo": "Vælg i logoet",
+    "fromScreen": "Vælg på skærmen",
+    "logoArea": "Logoet, som du kan vælge en farve i",
+    "logoHint": "Klik på en farve i logoet",
+    "logoFailed": "Logoet kan ikke læses her. Brug farverne nedenfor, eller skriv koden.",
+    "back": "Tilbage"
   },
   "image": {
     "upload": "Upload",

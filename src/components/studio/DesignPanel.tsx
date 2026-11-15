@@ -245,11 +245,13 @@ export function DesignPanel() {
             <ColorField
               label={t("main")}
               value={colors.primary}
+              logo={team.crest}
               onChange={(primary) => updateDesign({ colors: { ...colors, primary } })}
             />
             <ColorField
               label={t("accent")}
               value={colors.secondary}
+              logo={team.crest}
               onChange={(secondary) => updateDesign({ colors: { ...colors, secondary } })}
             />
           </div>

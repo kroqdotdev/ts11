@@ -339,6 +339,7 @@ export function SetupForm({
                   <ColorField
                     label={t("kit.main")}
                     value={d.colors.primary}
+                    logo={d.crest}
                     onChange={(primary) => {
                       const colors = { ...d.colors, primary };
                       patch({ colors, custom: colors });
@@ -347,6 +348,7 @@ export function SetupForm({
                   <ColorField
                     label={t("kit.second")}
                     value={d.colors.secondary}
+                    logo={d.crest}
                     onChange={(secondary) => {
                       const colors = { ...d.colors, secondary };
                       patch({ colors, custom: colors });
