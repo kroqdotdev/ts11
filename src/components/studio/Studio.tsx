@@ -8,6 +8,7 @@ import {
   CaretUpIcon,
   ListNumbersIcon,
   PaintBrushIcon,
+  ShieldIcon,
   SoccerBallIcon,
   UsersThreeIcon,
   XIcon,
@@ -26,6 +27,7 @@ import { Segmented } from "@/components/ui/controls";
 import { Wordmark } from "@/components/Wordmark";
 import { useActiveTeam, useHydrated, useStudio, useUi, type PanelId } from "@/lib/store";
 import type { FormatId } from "@/lib/types";
+import { ClubPanel } from "./ClubPanel";
 import { ClubSetup } from "./ClubSetup";
 import { DesignPanel } from "./DesignPanel";
 import { ExportControls } from "./ExportControls";
@@ -58,6 +60,11 @@ const PANELS: { value: PanelId; icon: ReactNode; body: ReactNode }[] = [
     value: "design",
     icon: <PaintBrushIcon size={20} weight="bold" />,
     body: <DesignPanel />,
+  },
+  {
+    value: "club",
+    icon: <ShieldIcon size={20} weight="bold" />,
+    body: <ClubPanel />,
   },
 ];
 
@@ -210,7 +217,7 @@ export function Studio() {
                   <Tabs.Tab
                     key={p.value}
                     value={p.value}
-                    className="relative flex h-12 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-[4px] px-0.5 text-[11px] leading-none font-semibold whitespace-nowrap text-ink-soft transition-colors hover:text-ink data-active:bg-ink data-active:text-paper lg:-mb-[2px] lg:h-11 lg:flex-row lg:gap-2 lg:rounded-b-none lg:border-2 lg:border-transparent lg:px-2 lg:font-signage lg:text-[19px] lg:font-normal lg:data-active:border-card-ink lg:data-active:border-b-paper lg:data-active:bg-paper lg:data-active:text-ink"
+                    className="relative flex h-12 min-w-9 flex-auto flex-col items-center justify-center gap-0.5 rounded-[4px] px-0.5 text-[11px] leading-none font-semibold whitespace-nowrap text-ink-soft transition-colors hover:text-ink data-active:bg-ink data-active:text-paper max-[399px]:px-0 max-[399px]:tracking-tight lg:-mb-[2px] lg:h-11 lg:flex-row lg:gap-2 lg:rounded-b-none lg:border-2 lg:border-transparent lg:px-2 lg:font-signage lg:text-[19px] lg:font-normal lg:data-active:border-card-ink lg:data-active:border-b-paper lg:data-active:bg-paper lg:data-active:text-ink"
                   >
                     <span aria-hidden className="lg:hidden">
                       {p.icon}

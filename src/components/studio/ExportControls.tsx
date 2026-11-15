@@ -195,7 +195,12 @@ export function ExportControls({ compact = false }: { compact?: boolean }) {
           ) : (
             <DownloadSimpleIcon size={18} weight="bold" />
           )}
-          {compact ? (canShare ? t("share") : t("save")) : t("downloadPng")}
+          {compact ? (
+            // The narrowest phones need the room for the five tabs: the icon says it there.
+            <span className="max-[399px]:sr-only">{canShare ? t("share") : t("save")}</span>
+          ) : (
+            t("downloadPng")
+          )}
         </Button>
         <MenuButton
           label={t("more")}

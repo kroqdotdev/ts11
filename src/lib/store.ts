@@ -669,7 +669,7 @@ export function isSnapshot(value: unknown): value is Snapshot {
 }
 
 /** Interface state that should not be saved (which side panel is open). */
-export type PanelId = "lineup" | "match" | "design" | "squad";
+export type PanelId = "lineup" | "match" | "design" | "squad" | "club";
 export const useUi = create<{
   panel: PanelId;
   setPanel: (panel: PanelId) => void;

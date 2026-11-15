@@ -13,13 +13,23 @@ export interface CrestBackground {
 
 const MAX = 256;
 
-async function load(src: string): Promise<{ data: ImageData; w: number; h: number }> {
+/**
+ * The image's pixels, at most `max` across. Throws when it can't be decoded or read (a
+ * picture from another site without CORS).
+ */
+export async function crestPixels(
+  src: string,
+  max = MAX,
+): Promise<{ data: ImageData; w: number; h: number }> {
   const img = new Image();
   img.src = src;
   await img.decode();
-  const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
-  const w = Math.max(1, Math.round(img.naturalWidth * scale));
-  const h = Math.max(1, Math.round(img.naturalHeight * scale));
+  // An SVG without a width or height has no natural size: draw it square.
+  const nw = img.naturalWidth || max;
+  const nh = img.naturalHeight || max;
+  const scale = Math.min(1, max / Math.max(nw, nh));
+  const w = Math.max(1, Math.round(nw * scale));
+  const h = Math.max(1, Math.round(nh * scale));
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
@@ -46,7 +56,7 @@ const dist = (d: Uint8ClampedArray, i: number, r: number, g: number, b: number) 
 export async function crestKindOf(src: string): Promise<"opaque" | "transparent"> {
   if (src.startsWith("data:image/svg")) return "transparent";
   try {
-    const { data, w, h } = await load(src);
+    const { data, w, h } = await crestPixels(src);
     const edge = borderIndexes(w, h);
     const opaque = edge.filter((i) => data.data[i * 4 + 3] > 230).length;
     return opaque >= edge.length * 0.6 ? "opaque" : "transparent";
@@ -58,7 +68,7 @@ export async function crestKindOf(src: string): Promise<"opaque" | "transparent"
 /** A solid opaque colour round the edge, or null when the edge is transparent or busy. */
 export async function crestBackground(src: string): Promise<CrestBackground | null> {
   if (src.startsWith("data:image/svg")) return null;
-  const { data, w, h } = await load(src);
+  const { data, w, h } = await crestPixels(src);
   const d = data.data;
   const edge = borderIndexes(w, h);
   const opaque = edge.filter((i) => d[i * 4 + 3] > 230);
@@ -128,4 +138,65 @@ export async function removeCrestBackground(src: string, bg: CrestBackground): P
   ctx.putImageData(data, 0, 0);
   const webp = canvas.toDataURL("image/webp", 0.92);
   return webp.startsWith("data:image/webp") ? webp : canvas.toDataURL("image/png");
+}
+
+/**
+ * The main colours in a crest's pixels, most used first: what the club's colours most
+ * likely are. Pixels that are see-through, or the solid background round the crest, are
+ * skipped. Pure, so it can be tested without a canvas.
+ */
+export function paletteOf(
+  d: Uint8ClampedArray,
+  { background, max = 6 }: { background?: string | null; max?: number } = {},
+): string[] {
+  const bg = background
+    ? [1, 3, 5].map((i) => Number.parseInt(background.slice(i, i + 2), 16))
+    : null;
+  // Buckets of 16 levels a channel, each keeping a sum so its colour is the true average.
+  const buckets = new Map<number, { n: number; r: number; g: number; b: number }>();
+  let total = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] < 200) continue;
+    const r = d[i];
+    const g = d[i + 1];
+    const b = d[i + 2];
+    if (bg && Math.max(Math.abs(r - bg[0]), Math.abs(g - bg[1]), Math.abs(b - bg[2])) < 28)
+      continue;
+    total++;
+    const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+    const k = buckets.get(key);
+    if (k) {
+      k.n++;
+      k.r += r;
+      k.g += g;
+      k.b += b;
+    } else buckets.set(key, { n: 1, r, g, b });
+  }
+  const ranked = [...buckets.values()]
+    .map((k) => ({ n: k.n, rgb: [k.r / k.n, k.g / k.n, k.b / k.n] }))
+    .sort((a, b) => b.n - a.n);
+  // Neighbouring buckets of one colour, and the blends along its edges, fold into the
+  // biggest colour near them.
+  const picked: { n: number; rgb: number[] }[] = [];
+  for (const c of ranked) {
+    const near = picked.find((p) => Math.max(...p.rgb.map((v, j) => Math.abs(v - c.rgb[j]))) < 48);
+    if (near) near.n += c.n;
+    else picked.push({ ...c });
+  }
+  return picked
+    .filter((p) => p.n >= total * 0.02)
+    .sort((a, b) => b.n - a.n)
+    .slice(0, max)
+    .map((p) => "#" + p.rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join(""));
+}
+
+/** The main colours in a crest image (see paletteOf). Empty when it can't be read. */
+export async function crestPalette(src: string): Promise<string[]> {
+  try {
+    const { data } = await crestPixels(src);
+    const bg = await crestBackground(src).catch(() => null);
+    return paletteOf(data.data, { background: bg?.color });
+  } catch {
+    return [];
+  }
 }
