@@ -68,7 +68,10 @@ export async function crestKindOf(src: string): Promise<"opaque" | "transparent"
 /** A solid opaque colour round the edge, or null when the edge is transparent or busy. */
 export async function crestBackground(src: string): Promise<CrestBackground | null> {
   if (src.startsWith("data:image/svg")) return null;
-  const { data, w, h } = await crestPixels(src);
+  return backgroundOf(await crestPixels(src));
+}
+
+function backgroundOf({ data, w, h }: { data: ImageData; w: number; h: number }) {
   const d = data.data;
   const edge = borderIndexes(w, h);
   const opaque = edge.filter((i) => d[i * 4 + 3] > 230);
@@ -193,9 +196,9 @@ export function paletteOf(
 /** The main colours in a crest image (see paletteOf). Empty when it can't be read. */
 export async function crestPalette(src: string): Promise<string[]> {
   try {
-    const { data } = await crestPixels(src);
-    const bg = await crestBackground(src).catch(() => null);
-    return paletteOf(data.data, { background: bg?.color });
+    const px = await crestPixels(src);
+    const bg = src.startsWith("data:image/svg") ? null : backgroundOf(px);
+    return paletteOf(px.data.data, { background: bg?.color });
   } catch {
     return [];
   }

@@ -63,7 +63,8 @@ function useCrestPalette(src: string | null | undefined): string[] {
   return src && read?.src === src ? read.colors : [];
 }
 
-const BOX = { w: 232, h: 176 };
+// The space inside the popup (w-64, p-3) and the frame's 2px borders.
+const BOX = { w: 220, h: 176 };
 
 /**
  * The crest drawn big, for picking the exact colour of any part of it: point to see the
@@ -179,6 +180,8 @@ function CrestColorPicker({
         <button
           type="button"
           onClick={onBack}
+          // The "Pick from logo" button that opened this is gone: keep the focus in the popup.
+          autoFocus
           className="shrink-0 font-semibold text-ink underline-offset-2 hover:underline"
         >
           {t("back")}
@@ -222,6 +225,13 @@ function ColorPopup({
   logo?: string | null;
 }) {
   const [fromLogo, setFromLogo] = useState(false);
+  const logoButton = useRef<HTMLButtonElement>(null);
+  const backToPicker = useRef(false);
+  useEffect(() => {
+    // Back from the logo: focus returns to the button that opened it.
+    if (!fromLogo && backToPicker.current) logoButton.current?.focus();
+    backToPicker.current = false;
+  }, [fromLogo]);
   const palette = useCrestPalette(logo);
   const Dropper = eyeDropper();
   const t = useTranslations("ui.color");
@@ -239,7 +249,16 @@ function ColorPopup({
   return (
     <>
       {logo && fromLogo ? (
-        <CrestColorPicker src={logo} onPick={onChange} onBack={() => setFromLogo(false)} />
+        <CrestColorPicker
+          // A new logo starts the picker afresh.
+          key={logo}
+          src={logo}
+          onPick={onChange}
+          onBack={() => {
+            backToPicker.current = true;
+            setFromLogo(false);
+          }}
+        />
       ) : (
         <HexColorPicker color={value} onChange={onChange} className="!w-full" />
       )}
@@ -261,7 +280,7 @@ function ColorPopup({
       {(logo || Dropper) && (
         <div className="flex flex-wrap gap-2">
           {logo && !fromLogo && (
-            <Button size="sm" onClick={() => setFromLogo(true)}>
+            <Button ref={logoButton} size="sm" onClick={() => setFromLogo(true)}>
               <ShieldIcon size={16} />
               {t("fromLogo")}
             </Button>
