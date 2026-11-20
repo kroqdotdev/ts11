@@ -54,7 +54,7 @@
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.5",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^20",
+    "@types/node": "^25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.11",
